@@ -6,9 +6,17 @@ import java.time.ZonedDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "bookings", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"user_id", "event_id"})
-})
+@Table(name = "bookings", 
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "event_id"}), // Prevent duplicate bookings per user per event
+        @UniqueConstraint(columnNames = {"idempotency_key"}) // Ensure idempotency key uniqueness
+    },
+    indexes = {
+        @Index(name = "idx_bookings_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_bookings_event_status", columnList = "event_id, status"),
+        @Index(name = "idx_bookings_created_at", columnList = "created_at")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,6 +43,10 @@ public class Booking {
     @Column(name = "status", nullable = false)
     private String status;
 
+    // Idempotency key to prevent duplicate bookings on retries
+    @Column(name = "idempotency_key", unique = true)
+    private String idempotencyKey;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
 
@@ -45,5 +57,25 @@ public class Booking {
         if (status != null && !status.equals("CONFIRMED") && !status.equals("CANCELLED")) {
             throw new IllegalStateException("Status must be CONFIRMED or CANCELLED");
         }
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalStateException("Quantity must be positive");
+        }
+    }
+
+    // Helper methods for status checks
+    public boolean isConfirmed() {
+        return "CONFIRMED".equals(status);
+    }
+
+    public boolean isCancelled() {
+        return "CANCELLED".equals(status);
+    }
+
+    public void confirm() {
+        this.status = "CONFIRMED";
+    }
+
+    public void cancel() {
+        this.status = "CANCELLED";
     }
 }

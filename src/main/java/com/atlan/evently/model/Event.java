@@ -8,7 +8,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "events", indexes = {
     @Index(name = "idx_events_starts_at", columnList = "starts_at"),
-    @Index(name = "idx_events_name", columnList = "name")
+    @Index(name = "idx_events_name", columnList = "name"),
+    @Index(name = "idx_events_available_seats", columnList = "available_seats") // For concurrent booking queries
 })
 @Getter
 @Setter
@@ -40,6 +41,7 @@ public class Event {
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
 
+    // Optimistic locking for concurrency control
     @Version
     @Column(name = "version", nullable = false)
     private Integer version;
@@ -53,6 +55,30 @@ public class Event {
         }
         if (availableSeats < 0) {
             throw new IllegalStateException("Available seats cannot be negative");
+        }
+    }
+
+    // Helper method to check if booking is possible
+    public boolean canAccommodate(Integer requestedSeats) {
+        return availableSeats != null && requestedSeats != null 
+               && availableSeats >= requestedSeats && requestedSeats > 0;
+    }
+
+    // Helper method for atomic seat reservation
+    public void reserveSeats(Integer quantity) {
+        if (!canAccommodate(quantity)) {
+            throw new IllegalStateException(
+                String.format("Cannot reserve %d seats. Only %d available.", quantity, availableSeats)
+            );
+        }
+        this.availableSeats -= quantity;
+    }
+
+    // Helper method for seat restoration
+    public void restoreSeats(Integer quantity) {
+        this.availableSeats += quantity;
+        if (this.availableSeats > capacity) {
+            this.availableSeats = capacity; // Safety cap
         }
     }
 }

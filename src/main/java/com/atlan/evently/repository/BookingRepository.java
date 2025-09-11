@@ -2,6 +2,7 @@ package com.atlan.evently.repository;
 
 import com.atlan.evently.model.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,6 +24,23 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByEventId(UUID eventId);
     
     List<Booking> findByStatusAndEventId(String status, UUID eventId);
+
+    // Idempotency support - check for existing booking with same key
+    Optional<Booking> findByIdempotencyKey(String idempotencyKey);
+
+    // Check if user already has a booking for this event (prevent duplicates)
+    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId AND b.event.id = :eventId AND b.status = 'CONFIRMED'")
+    Optional<Booking> findExistingBooking(@Param("userId") UUID userId, @Param("eventId") UUID eventId);
+
+    // Atomic seat reservation - critical for concurrency
+    @Modifying
+    @Query("UPDATE Event e SET e.availableSeats = e.availableSeats - :quantity WHERE e.id = :eventId AND e.availableSeats >= :quantity")
+    int reserveSeats(@Param("eventId") UUID eventId, @Param("quantity") Integer quantity);
+
+    // Atomic seat restoration for cancellations
+    @Modifying
+    @Query("UPDATE Event e SET e.availableSeats = e.availableSeats + :quantity WHERE e.id = :eventId")
+    int restoreSeats(@Param("eventId") UUID eventId, @Param("quantity") Integer quantity);
 
     // Custom queries for advanced admin analytics
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.event.id = :eventId AND b.status = 'CONFIRMED'")

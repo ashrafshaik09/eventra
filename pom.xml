@@ -33,6 +33,18 @@
         <lombok.version>1.18.34</lombok.version> <!-- Latest stable as of 2025 -->
     </properties>
     <dependencies>
+        <!-- Spring Retry for handling concurrency conflicts -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+        
+        <!-- Spring AOP (required for @Retryable) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Enables Actuator endpoints for monitoring, health checks, and metrics -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
