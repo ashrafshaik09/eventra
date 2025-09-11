@@ -81,8 +81,10 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public AnalyticsResponse getAnalytics() {
+        // Basic analytics (existing)
         long totalBookings = bookingRepository.count();
-        long totalCapacity = eventRepository.count() > 0 ?
+        long totalEvents = eventRepository.count();
+        long totalCapacity = totalEvents > 0 ?
                 eventRepository.findAll().stream()
                         .mapToLong(Event::getCapacity)
                         .sum() : 0;
@@ -90,11 +92,50 @@ public class AdminService {
         double utilization = totalBookings > 0 && totalCapacity > 0 ?
                 (double) totalBookings / totalCapacity * 100 : 0.0;
 
+        // Enhanced analytics - Most popular events
+        List<AnalyticsResponse.PopularEventResponse> popularEvents = getMostPopularEvents(5);
+        
+        // Sold out events count
+        long soldOutEvents = eventRepository.findAll().stream()
+                .mapToLong(event -> event.getAvailableSeats() == 0 ? 1 : 0)
+                .sum();
+
         AnalyticsResponse response = new AnalyticsResponse();
         response.setTotalBookings(totalBookings);
         response.setTotalCapacity(totalCapacity);
+        response.setTotalEvents(totalEvents);
+        response.setSoldOutEvents(soldOutEvents);
         response.setUtilizationPercentage(String.format("%.2f", utilization));
+        response.setMostPopularEvents(popularEvents);
+        
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AnalyticsResponse.PopularEventResponse> getMostPopularEvents(int limit) {
+        // Get events with booking counts
+        List<Event> allEvents = eventRepository.findAll();
+        
+        return allEvents.stream()
+                .map(event -> {
+                    long bookingCount = bookingRepository.countConfirmedBookingsByEventId(event.getId());
+                    
+                    AnalyticsResponse.PopularEventResponse popularEvent = new AnalyticsResponse.PopularEventResponse();
+                    popularEvent.setEventId(event.getId().toString());
+                    popularEvent.setEventName(event.getName());
+                    popularEvent.setVenue(event.getVenue());
+                    popularEvent.setTotalBookings(bookingCount);
+                    popularEvent.setCapacity(event.getCapacity());
+                    
+                    double eventUtilization = event.getCapacity() > 0 ?
+                            (double) bookingCount / event.getCapacity() * 100 : 0.0;
+                    popularEvent.setUtilizationPercentage(String.format("%.2f", eventUtilization));
+                    
+                    return popularEvent;
+                })
+                .sorted((a, b) -> Long.compare(b.getTotalBookings(), a.getTotalBookings()))
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     // Admin Booking Management Methods (new)

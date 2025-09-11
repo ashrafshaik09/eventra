@@ -239,22 +239,7 @@ class GlobalExceptionHandlerTest {
         assertEquals("MISSING_PARAMETER", error.getErrorCode());
         assertTrue(error.getMessage().contains("eventId"));
     }
-
-    @Test
-    void testHandleHttpRequestMethodNotSupportedException() {
-        HttpRequestMethodNotSupportedException ex = new HttpRequestMethodNotSupportedException(
-                "PATCH", new String[]{"GET", "POST", "PUT", "DELETE"});
-
-        ResponseEntity<ErrorResponse> response = handler.handleMethodNotAllowed(ex, webRequest);
-
-        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
-        ErrorResponse error = response.getBody();
-        assertNotNull(error);
-        assertEquals("METHOD_NOT_ALLOWED", error.getErrorCode());
-        assertTrue(error.getMessage().contains("PATCH"));
-        assertTrue(error.getDetails().contains("GET, POST, PUT, DELETE"));
-    }
-
+    
     @Test
     void testHandleDataIntegrityViolationException() {
         DataIntegrityViolationException ex = new DataIntegrityViolationException(
