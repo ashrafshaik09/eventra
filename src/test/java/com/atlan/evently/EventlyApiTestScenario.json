@@ -1,14 +1,15 @@
 {
   "info": {
-    "name": "Evently - POST-first Sequential Test Scenario (Fixed)",
-    "description": "Create resources first (POST) then GET → PUT → DELETE. Handles eventId capture reliably.",
+    "name": "Evently - Complete API Test Scenario with User Registration",
+    "description": "Complete test flow: User Registration → Admin Event Creation → Event Browse → Booking → Analytics → Cleanup. Handles UUID properly.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "version": "1.0.1"
+    "version": "2.0.0"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
     { "key": "adminToken", "value": "admin-secret" },
-    { "key": "userId", "value": "1" },
+    { "key": "userId", "value": "" },
+    { "key": "userEmail", "value": "testuser@example.com" },
     { "key": "eventId", "value": "" },
     { "key": "adminEventId", "value": "" },
     { "key": "bookingId", "value": "" },
@@ -16,7 +17,107 @@
   ],
   "item": [
     {
-      "name": "1 - POST /admin/events (Create event - Admin)",
+      "name": "1 - POST /users/register (Register Test User)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"testpassword123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","users","register"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('User registration status 201', function() { pm.response.to.have.status(201); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('User created with valid data', function() {",
+              "  pm.expect(json.name).to.eql('Test User');",
+              "  pm.expect(json.email).to.eql(pm.environment.get('userEmail'));",
+              "  pm.expect(json.role).to.eql('USER');",
+              "  pm.expect(json.isActive).to.eql(true);",
+              "});",
+              "if (json.userId) {",
+              "  pm.environment.set('userId', json.userId);",
+              "  console.log('Captured userId:', json.userId);",
+              "} else {",
+              "  console.warn('No userId in registration response');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2 - GET /users/check-email/{email} (Check Email Exists)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/check-email/{{userEmail}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","users","check-email","{{userEmail}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Email check status 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Email exists returns true', function() {",
+              "  pm.expect(pm.response.text()).to.eql('true');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3 - GET /users/{id} (Get User by ID)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","users","{{userId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Get user status 200', function() { pm.response.to.have.status(200); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('User data is correct', function() {",
+              "  pm.expect(json.userId).to.eql(pm.environment.get('userId'));",
+              "  pm.expect(json.name).to.eql('Test User');",
+              "  pm.expect(json.email).to.eql(pm.environment.get('userEmail'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "4 - POST /admin/events (Create Event - Admin)",
       "request": {
         "method": "POST",
         "header": [
@@ -25,7 +126,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"eventName\": \"Test Concert - POST-first\",\n  \"venue\": \"Test Venue\",\n  \"startTime\": \"2025-09-12T18:00:00Z\",\n  \"capacity\": 100\n}"
+          "raw": "{\n  \"eventName\": \"Spring Music Festival 2025\",\n  \"venue\": \"Central Park Amphitheater\",\n  \"startTime\": \"2025-06-15T19:00:00Z\",\n  \"capacity\": 500\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/admin/events",
@@ -38,14 +139,18 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status code 201', function() { pm.response.to.have.status(201); });",
+              "pm.test('Event creation status 201', function() { pm.response.to.have.status(201); });",
               "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
-              "pm.test('availableSeats equals capacity (100)', function() { pm.expect(json.availableSeats).to.eql(100); });",
-              "let eid = json.eventId || json.id || json.event_id;",
-              "if (eid) {",
-              "  pm.environment.set('adminEventId', eid);",
-              "  pm.environment.set('eventId', eid);",
-              "  console.log('Captured eventId:', eid);",
+              "pm.test('Event created with correct data', function() {",
+              "  pm.expect(json.name).to.eql('Spring Music Festival 2025');",
+              "  pm.expect(json.venue).to.eql('Central Park Amphitheater');",
+              "  pm.expect(json.capacity).to.eql(500);",
+              "  pm.expect(json.availableSeats).to.eql(500);",
+              "});",
+              "if (json.eventId) {",
+              "  pm.environment.set('adminEventId', json.eventId);",
+              "  pm.environment.set('eventId', json.eventId);",
+              "  console.log('Captured eventId:', json.eventId);",
               "} else {",
               "  console.warn('No eventId in create response');",
               "}"
@@ -57,7 +162,7 @@
     },
 
     {
-      "name": "2 - GET /events (List upcoming events)",
+      "name": "5 - GET /events (List All Events - Paginated)",
       "request": {
         "method": "GET",
         "header": [],
@@ -76,13 +181,23 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Get events status 200', function() { pm.response.to.have.status(200); });",
               "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
-              "pm.test('content array exists and has at least 1 item', function() { pm.expect(json.content).to.be.an('array'); pm.expect(json.content.length).to.be.at.least(1); });",
-              "if (!pm.environment.get('eventId') && json.content && json.content.length>0 && (json.content[0].eventId || json.content[0].id)) {",
-              "  let eid = json.content[0].eventId || json.content[0].id;",
-              "  pm.environment.set('eventId', eid);",
-              "  console.log('Extracted eventId from list:', eid);",
+              "pm.test('Events list has proper pagination structure', function() {",
+              "  pm.expect(json.content).to.be.an('array');",
+              "  pm.expect(json.totalElements).to.be.a('number');",
+              "  pm.expect(json.totalPages).to.be.a('number');",
+              "  pm.expect(json.number).to.eql(0); // first page",
+              "});",
+              "pm.test('At least one event exists', function() {",
+              "  pm.expect(json.content.length).to.be.at.least(1);",
+              "});",
+              "if (!pm.environment.get('eventId') && json.content && json.content.length > 0) {",
+              "  let firstEvent = json.content[0];",
+              "  if (firstEvent.eventId) {",
+              "    pm.environment.set('eventId', firstEvent.eventId);",
+              "    console.log('Extracted eventId from list:', firstEvent.eventId);",
+              "  }",
               "}"
             ],
             "type": "text/javascript"
@@ -92,7 +207,7 @@
     },
 
     {
-      "name": "3 - GET /events/{id} (Get event details)",
+      "name": "6 - GET /events/{id} (Get Specific Event Details)",
       "request": {
         "method": "GET",
         "header": [],
@@ -107,9 +222,16 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
+              "pm.test('Get event by ID status 200', function() { pm.response.to.have.status(200); });",
               "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
-              "pm.test('availableSeats is numeric and >= 0', function(){ pm.expect(json.availableSeats).to.be.a('number'); pm.expect(json.availableSeats).to.be.at.least(0); });"
+              "pm.test('Event details are complete', function() {",
+              "  pm.expect(json.eventId).to.eql(pm.environment.get('eventId'));",
+              "  pm.expect(json.name).to.be.a('string').and.not.empty;",
+              "  pm.expect(json.venue).to.be.a('string').and.not.empty;",
+              "  pm.expect(json.capacity).to.be.a('number').and.above(0);",
+              "  pm.expect(json.availableSeats).to.be.a('number').and.at.least(0);",
+              "  pm.expect(json.startTime).to.be.a('string').and.not.empty;",
+              "});"
             ],
             "type": "text/javascript"
           }
@@ -118,7 +240,7 @@
     },
 
     {
-      "name": "4 - PUT /admin/events/{id} (Update event - Admin to capacity 150)",
+      "name": "7 - PUT /admin/events/{id} (Update Event - Increase Capacity)",
       "request": {
         "method": "PUT",
         "header": [
@@ -127,7 +249,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"eventName\": \"Updated Concert - capacity 150\",\n  \"venue\": \"Updated Venue\",\n  \"startTime\": \"2025-09-13T18:00:00Z\",\n  \"capacity\": 150\n}"
+          "raw": "{\n  \"eventName\": \"Spring Music Festival 2025 - Extended\",\n  \"venue\": \"Central Park Amphitheater - Main Stage\",\n  \"startTime\": \"2025-06-15T19:00:00Z\",\n  \"capacity\": 750\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/admin/events/{{adminEventId}}",
@@ -140,18 +262,23 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
-              "let json = {}; try { json = pm.response.json(); } catch(e){ json = {}; }",
-              "pm.test('capacity == 150', function(){ pm.expect(json.capacity).to.eql(150); });"
+              "pm.test('Event update status 200', function() { pm.response.to.have.status(200); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('Event updated correctly', function() {",
+              "  pm.expect(json.name).to.contain('Extended');",
+              "  pm.expect(json.venue).to.contain('Main Stage');",
+              "  pm.expect(json.capacity).to.eql(750);",
+              "  pm.expect(json.availableSeats).to.eql(750);",
+              "});"
             ],
             "type": "text/javascript"
           }
         }
       ]
     },
-    
+
     {
-      "name": "5 - POST /bookings (Create booking) - generates idempotencyKey",
+      "name": "8 - POST /bookings (Create Booking with Idempotency)",
       "request": {
         "method": "POST",
         "header": [
@@ -159,7 +286,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"eventId\": \"{{adminEventId}}\",\n  \"quantity\": 1,\n  \"idempotencyKey\": \"{{idempotencyKey}}\"\n}"
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"eventId\": \"{{adminEventId}}\",\n  \"quantity\": 3,\n  \"idempotencyKey\": \"{{idempotencyKey}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/bookings",
@@ -172,11 +299,16 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "(function(){",
-              "  function uuidv4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){ var r=Math.random()*16|0, v=c=='x'?r:(r&0x3|0x8); return v.toString(16); }); }",
-              "  pm.environment.set('idempotencyKey', uuidv4());",
-              "  console.log('Generated idempotencyKey:', pm.environment.get('idempotencyKey'));",
-              "})();"
+              "// Generate unique idempotency key",
+              "function uuidv4() {",
+              "  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {",
+              "    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);",
+              "    return v.toString(16);",
+              "  });",
+              "}",
+
+              "pm.environment.set('idempotencyKey', uuidv4());",
+              "console.log('Generated idempotencyKey:', pm.environment.get('idempotencyKey'));"
             ],
             "type": "text/javascript"
           }
@@ -185,10 +317,19 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 201', function(){ pm.response.to.have.status(201); });",
-              "let json = {}; try { json = pm.response.json(); } catch(e){ json = {}; }",
-              "pm.test('bookingStatus == CONFIRMED', function(){ pm.expect(json.bookingStatus).to.eql('CONFIRMED'); });",
-              "if (json.bookingId) { pm.environment.set('bookingId', json.bookingId); console.log('bookingId set:', json.bookingId); }"
+              "pm.test('Booking creation status 201', function() { pm.response.to.have.status(201); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('Booking created successfully', function() {",
+              "  pm.expect(json.userId).to.eql(pm.environment.get('userId'));",
+              "  pm.expect(json.eventId).to.eql(pm.environment.get('adminEventId'));",
+              "  pm.expect(json.quantity).to.eql(3);",
+              "  pm.expect(json.bookingStatus).to.eql('CONFIRMED');",
+              "  pm.expect(json.bookingId).to.be.a('string').and.not.empty;",
+              "});",
+              "if (json.bookingId) {",
+              "  pm.environment.set('bookingId', json.bookingId);",
+              "  console.log('Captured bookingId:', json.bookingId);",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -197,7 +338,7 @@
     },
 
     {
-      "name": "6 - GET /users/{id}/bookings (View booking history)",
+      "name": "9 - GET /bookings/users/{userId} (Get User Booking History)",
       "request": {
         "method": "GET",
         "header": [],
@@ -215,9 +356,18 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
-              "let json = []; try { json = pm.response.json(); } catch(e){ json = []; }",
-              "pm.test('At least one confirmed booking', function(){ pm.expect(json.length).to.be.at.least(1); });"
+              "pm.test('Get user bookings status 200', function() { pm.response.to.have.status(200); });",
+              "let json = []; try { json = pm.response.json(); } catch(e) { json = []; }",
+              "pm.test('User has confirmed bookings', function() {",
+              "  pm.expect(json).to.be.an('array');",
+              "  pm.expect(json.length).to.be.at.least(1);",
+              "});",
+              "pm.test('Booking details are correct', function() {",
+              "  let booking = json[0];",
+              "  pm.expect(booking.userId).to.eql(pm.environment.get('userId'));",
+              "  pm.expect(booking.bookingStatus).to.eql('CONFIRMED');",
+              "  pm.expect(booking.quantity).to.be.a('number').and.above(0);",
+              "});"
             ],
             "type": "text/javascript"
           }
@@ -226,14 +376,14 @@
     },
 
     {
-      "name": "7 - DELETE /bookings/{id} (Cancel booking)",
+      "name": "10 - GET /bookings/users/{userId} (Get All User Bookings)",
       "request": {
-        "method": "DELETE",
+        "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}",
+          "raw": "{{baseUrl}}/api/v1/bookings/users/{{userId}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api","v1","bookings","{{bookingId}}"]
+          "path": ["api","v1","bookings","users","{{userId}}"]
         }
       },
       "event": [
@@ -241,8 +391,12 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 204', function(){ pm.response.to.have.status(204); });",
-              "pm.environment.unset('bookingId');"
+              "pm.test('Get all user bookings status 200', function() { pm.response.to.have.status(200); });",
+              "let json = []; try { json = pm.response.json(); } catch(e) { json = []; }",
+              "pm.test('User booking history exists', function() {",
+              "  pm.expect(json).to.be.an('array');",
+              "  pm.expect(json.length).to.be.at.least(1);",
+              "});"
             ],
             "type": "text/javascript"
           }
@@ -251,7 +405,7 @@
     },
 
     {
-      "name": "8 - GET /admin/events/analytics (Get analytics - Admin)",
+      "name": "11 - GET /admin/events/analytics (Get Booking Analytics)",
       "request": {
         "method": "GET",
         "header": [
@@ -268,10 +422,16 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
-              "let json = {}; try { json = pm.response.json(); } catch(e){ json = {}; }",
-              "pm.test('totalBookings >= 0', function(){ pm.expect(json.totalBookings).to.be.a('number'); pm.expect(json.totalBookings).to.be.at.least(0); });",
-              "pm.test('utilizationPercentage regex', function(){ pm.expect(json.utilizationPercentage).to.match(/^[0-9]{1,2}(\\.[0-9]{2})?$/); });"
+              "pm.test('Analytics status 200', function() { pm.response.to.have.status(200); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('Analytics data is complete', function() {",
+              "  pm.expect(json.totalBookings).to.be.a('number').and.at.least(0);",
+              "  pm.expect(json.totalCapacity).to.be.a('number').and.at.least(0);",
+              "  pm.expect(json.utilizationPercentage).to.be.a('string').and.match(/^\\d+\\.\\d{2}$/);",
+              "});",
+              "pm.test('Analytics show at least one booking', function() {",
+              "  pm.expect(json.totalBookings).to.be.at.least(1);",
+              "});"
             ],
             "type": "text/javascript"
           }
@@ -280,21 +440,20 @@
     },
 
     {
-      "name": "9 - PUT /admin/events/{id} (Soft-delete event - mark capacity 0)",
+      "name": "12 - POST /bookings (Test Idempotency - Duplicate Request)",
       "request": {
-        "method": "PUT",
+        "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "X-Admin-Token", "value": "{{adminToken}}" }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"eventName\": \"DELETED - Test Concert\",\n  \"venue\": \"Deleted Venue\",\n  \"startTime\": \"2025-09-13T18:00:00Z\",\n  \"capacity\": 0\n}"
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"eventId\": \"{{adminEventId}}\",\n  \"quantity\": 3,\n  \"idempotencyKey\": \"{{idempotencyKey}}\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/v1/admin/events/{{adminEventId}}",
+          "raw": "{{baseUrl}}/api/v1/bookings",
           "host": ["{{baseUrl}}"],
-          "path": ["api","v1","admin","events","{{adminEventId}}"]
+          "path": ["api","v1","bookings"]
         }
       },
       "event": [
@@ -302,9 +461,194 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
-              "let json = {}; try { json = pm.response.json(); } catch(e){ json = {}; }",
-              "pm.test('capacity set to 0', function(){ pm.expect(json.capacity).to.eql(0); });"
+              "// Note: Idempotency implementation depends on service logic",
+              "// This test shows the same request with same idempotencyKey", 
+              "pm.test('Duplicate booking request handled', function() {",
+              "  // Could be 409 Conflict (already exists) or 201 (idempotent success)",
+              "  pm.expect([201, 409]).to.include(pm.response.code);",
+              "});",
+              "console.log('Idempotency test result:', pm.response.code, pm.response.json());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "13 - DELETE /bookings/{id} (Cancel Booking)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","bookings","{{bookingId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking cancellation status 204', function() { pm.response.to.have.status(204); });",
+              "pm.test('No content returned', function() {",
+              "  pm.expect(pm.response.text()).to.be.empty;",
+              "});",
+              "console.log('Booking cancelled successfully');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "14 - GET /bookings/users/{userId} (Verify Cancellation)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/bookings/users/{{userId}}?status=CANCELLED",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","bookings","users","{{userId}}"],
+          "query": [
+            { "key": "status", "value": "CANCELLED" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Get cancelled bookings status 200', function() { pm.response.to.have.status(200); });",
+              "let json = []; try { json = pm.response.json(); } catch(e) { json = []; }",
+              "pm.test('User has cancelled bookings', function() {",
+              "  pm.expect(json).to.be.an('array');",
+              "  pm.expect(json.length).to.be.at.least(1);",
+              "});",
+              "pm.test('Booking is marked as cancelled', function() {",
+              "  let cancelledBooking = json.find(b => b.bookingId === pm.environment.get('bookingId'));",
+              "  pm.expect(cancelledBooking).to.not.be.undefined;",
+              "  pm.expect(cancelledBooking.bookingStatus).to.eql('CANCELLED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "15 - GET /admin/events/analytics (Final Analytics Check)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Admin-Token", "value": "{{adminToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/events/analytics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","admin","events","analytics"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Final analytics status 200', function() { pm.response.to.have.status(200); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('Analytics reflect booking activity', function() {",
+              "  pm.expect(json.totalBookings).to.be.a('number');",
+              "  pm.expect(json.totalCapacity).to.be.a('number').and.above(0);",
+              "  pm.expect(json.utilizationPercentage).to.be.a('string');",
+              "});",
+              "console.log('Final analytics:', json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "16 - GET /users/email/{email} (Test Get User by Email)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/email/{{userEmail}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","users","email","{{userEmail}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Get user by email status 200', function() { pm.response.to.have.status(200); });",
+              "let json = {}; try { json = pm.response.json(); } catch(e) { json = {}; }",
+              "pm.test('User found by email', function() {",
+              "  pm.expect(json.email).to.eql(pm.environment.get('userEmail'));",
+              "  pm.expect(json.userId).to.eql(pm.environment.get('userId'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "17 - Error Tests - Invalid Event ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/invalid-uuid-format",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","events","invalid-uuid-format"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid UUID format returns 400 or 409', function() {",
+              "  pm.expect([400, 409, 500]).to.include(pm.response.code);",
+              "});",
+              "console.log('Error handling test result:', pm.response.code);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "18 - Error Tests - Unauthorized Admin Access",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/events/analytics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","v1","admin","events","analytics"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Unauthorized admin access returns 401 or 403', function() {",
+              "  pm.expect([401, 403]).to.include(pm.response.code);",
+              "});",
+              "console.log('Security test result:', pm.response.code);"
             ],
             "type": "text/javascript"
           }

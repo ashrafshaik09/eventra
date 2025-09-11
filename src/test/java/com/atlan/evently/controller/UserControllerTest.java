@@ -34,17 +34,20 @@ class UserControllerTest {
         mockResponse.setUserId("123e4567-e89b-12d3-a456-426614174000");
         mockResponse.setName("John Doe");
         mockResponse.setEmail("john@example.com");
+        mockResponse.setRole("USER");
+        mockResponse.setIsActive(true);
         mockResponse.setCreatedAt(ZonedDateTime.now());
 
         when(userService.registerUser(any(UserRegistrationRequest.class))).thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/users/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"John Doe\",\"email\":\"john@example.com\"}"))
-                .andExpected(status().isCreated())
-                .andExpected(jsonPath("$.userId").value("123e4567-e89b-12d3-a456-426614174000"))
-                .andExpected(jsonPath("$.name").value("John Doe"))
-                .andExpected(jsonPath("$.email").value("john@example.com"));
+                .content("{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"password\":\"password123\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value("123e4567-e89b-12d3-a456-426614174000"))
+                .andExpect(jsonPath("$.name").value("John Doe"))
+                .andExpect(jsonPath("$.email").value("john@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"));
 
         verify(userService, times(1)).registerUser(any(UserRegistrationRequest.class));
     }

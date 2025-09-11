@@ -15,10 +15,16 @@ public interface UserMapper {
     UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
 
     @Mapping(target = "userId", source = "id")
+    @Mapping(target = "role", expression = "java(user.getRole().name())")
     UserResponse toResponse(User user);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "passwordHash", ignore = true) // Will be set manually in service
+    @Mapping(target = "role", expression = "java(com.atlan.evently.model.User.UserRole.USER)")
+    @Mapping(target = "isActive", constant = "true")
+    @Mapping(target = "lastLogin", ignore = true)
     @Mapping(target = "createdAt", expression = "java(java.time.ZonedDateTime.now())")
+    @Mapping(target = "updatedAt", expression = "java(java.time.ZonedDateTime.now())")
     @Mapping(target = "bookings", ignore = true)
     User toEntity(UserRegistrationRequest request);
 

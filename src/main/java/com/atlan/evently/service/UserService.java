@@ -7,6 +7,7 @@ import com.atlan.evently.mapper.UserMapper;
 import com.atlan.evently.model.User;
 import com.atlan.evently.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder; // Add password encoder
 
     @Transactional
     public UserResponse registerUser(UserRegistrationRequest request) {
@@ -30,8 +32,10 @@ public class UserService {
                     "A user with email " + request.getEmail() + " already exists");
         }
 
-        // Create and save user
+        // Create user entity and hash password
         User user = userMapper.toEntity(request);
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        
         User savedUser = userRepository.save(user);
         
         return userMapper.toResponse(savedUser);
@@ -69,6 +73,12 @@ public class UserService {
         }
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email is required");
+        }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (request.getPassword().length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
         }
         if (!isValidEmail(request.getEmail())) {
             throw new IllegalArgumentException("Invalid email format");
