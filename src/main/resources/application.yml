@@ -89,6 +89,20 @@ spring:
   main:
     "banner-mode": off
 
+  # Mail configuration for MailHog (local development)
+  mail:
+    host: localhost
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+        debug: false
+
 # Application-specific configuration
 evently:
   cache:
@@ -112,6 +126,7 @@ evently:
     email:
       "from-address": "noreply@evently.com"
       "from-name": "Evently Platform"
+      "template-path": "classpath:/email-templates/"
 
 management:
   endpoints:

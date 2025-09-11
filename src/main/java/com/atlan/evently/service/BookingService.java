@@ -2,6 +2,7 @@ package com.atlan.evently.service;
 
 import com.atlan.evently.dto.BookingRequest;
 import com.atlan.evently.dto.BookingResponse;
+import com.atlan.evently.dto.events.BookingCancelledEvent;
 import com.atlan.evently.exception.BookingConflictException;
 import com.atlan.evently.exception.DuplicateBookingException;
 import com.atlan.evently.exception.EventException;
@@ -36,6 +37,7 @@ public class BookingService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+    private final EventPublisher eventPublisher; // NEW: Add event publisher
 
     // ========== READ OPERATIONS (unchanged) ==========
     
@@ -56,7 +58,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    // ========== ENHANCED BOOKING CREATION WITH CONCURRENCY PROTECTION ==========
+    // ========== ENHANCED BOOKING CREATION WITH CONCURRENCY PROTECTION (unchanged) ==========
 
     /**
      * Create booking with multi-layered concurrency protection:
@@ -158,7 +160,7 @@ public class BookingService {
         }
     }
 
-    // ========== ENHANCED BOOKING CANCELLATION ==========
+    // ========== ENHANCED BOOKING CANCELLATION WITH KAFKA EVENT PUBLISHING ==========
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Retryable(value = {OptimisticLockingFailureException.class}, 
@@ -185,6 +187,11 @@ public class BookingService {
                     "Event started at " + booking.getEvent().getStartsAt());
         }
 
+        // Store event details before cancellation for Kafka event
+        String userId = booking.getUser().getId().toString();
+        String eventId = booking.getEvent().getId().toString();
+        Integer quantity = booking.getQuantity();
+
         // Update booking status
         booking.cancel();
         
@@ -197,6 +204,25 @@ public class BookingService {
         bookingRepository.save(booking);
         
         log.info("Booking {} cancelled successfully, {} seats restored", bookingId, booking.getQuantity());
+
+        // NEW: Publish booking cancelled event to Kafka for waitlist processing
+        try {
+            BookingCancelledEvent cancelledEvent = new BookingCancelledEvent(
+                bookingId,
+                userId,
+                eventId,
+                quantity,
+                ZonedDateTime.now(),
+                "USER_CANCELLED" // Could be "ADMIN_CANCELLED", "EXPIRED", etc.
+            );
+
+            eventPublisher.publishBookingCancelled(cancelledEvent);
+            log.info("Published booking cancelled event for booking {} to trigger waitlist processing", bookingId);
+            
+        } catch (Exception e) {
+            // Don't fail the cancellation if Kafka publishing fails
+            log.error("Failed to publish booking cancelled event for booking {}: {}", bookingId, e.getMessage(), e);
+        }
     }
 
     // ========== VALIDATION METHODS (enhanced) ==========
