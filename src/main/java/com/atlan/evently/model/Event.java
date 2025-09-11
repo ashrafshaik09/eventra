@@ -3,6 +3,7 @@ package com.atlan.evently.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "events", indexes = {
@@ -18,8 +19,8 @@ public class Event {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private String id;
+    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
+    private UUID id;
 
     @Column(name = "name", nullable = false)
     private String name;

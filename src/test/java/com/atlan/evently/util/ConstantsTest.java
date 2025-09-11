@@ -22,7 +22,9 @@ class ConstantsTest {
     }
 
     @Test
-    void testPrivateConstructor() {
-        assertThrows(IllegalStateException.class, Constants::new);
+    void testPrivateConstructor() throws Exception {
+        var constructor = Constants.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        assertThrows(IllegalStateException.class, constructor::newInstance);
     }
 }

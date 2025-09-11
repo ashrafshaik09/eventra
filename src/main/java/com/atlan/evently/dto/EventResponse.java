@@ -3,8 +3,8 @@ package com.atlan.evently.dto;
 import java.time.ZonedDateTime;
 
 public class EventResponse {
-
-    private String eventId;
+    
+    private String eventId; // Keep as String for API/JSON compatibility
     private String name;
     private String venue;
     private ZonedDateTime startTime;

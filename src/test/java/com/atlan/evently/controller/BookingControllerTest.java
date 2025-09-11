@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Collections;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,34 +30,44 @@ class BookingControllerTest {
 
     @Test
     void testGetUserBookingsReturnsOk() throws Exception {
-        when(bookingService.getUserBookings("1", null)).thenReturn(Collections.emptyList());
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        when(bookingService.getUserBookingsAsDto(userId, null)).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/v1/bookings/users/1"))
+        mockMvc.perform(get("/api/v1/bookings/users/" + userId))
                 .andExpect(status().isOk());
 
-        verify(bookingService, times(1)).getUserBookings("1", null);
+        verify(bookingService, times(1)).getUserBookingsAsDto(userId, null);
     }
 
     @Test
     void testCreateBookingReturnsCreated() throws Exception {
-        BookingRequest request = new BookingRequest();
-        request.setUserId("1");
-        request.setEventId("1");
-        request.setQuantity(2);
+        BookingResponse mockResponse = new BookingResponse();
+        mockResponse.setBookingId("123e4567-e89b-12d3-a456-426614174001");
+        mockResponse.setUserId("123e4567-e89b-12d3-a456-426614174000");
+        mockResponse.setEventId("123e4567-e89b-12d3-a456-426614174002");
+        mockResponse.setQuantity(2);
+        mockResponse.setBookingStatus("CONFIRMED");
+
+        when(bookingService.createBooking(any(BookingRequest.class))).thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/bookings")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":\"1\",\"eventId\":\"1\",\"quantity\":2}"))
-                .andExpect(status().isCreated());
+                .content("{\"userId\":\"123e4567-e89b-12d3-a456-426614174000\",\"eventId\":\"123e4567-e89b-12d3-a456-426614174002\",\"quantity\":2}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").value("123e4567-e89b-12d3-a456-426614174001"))
+                .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
 
-        // Note: Actual response mapping will be tested after BookingService implementation
+        verify(bookingService, times(1)).createBooking(any(BookingRequest.class));
     }
 
     @Test
     void testCancelBookingReturnsNoContent() throws Exception {
-        mockMvc.perform(delete("/api/v1/bookings/1"))
+        String bookingId = "123e4567-e89b-12d3-a456-426614174001";
+        doNothing().when(bookingService).cancelBooking(bookingId);
+
+        mockMvc.perform(delete("/api/v1/bookings/" + bookingId))
                 .andExpect(status().isNoContent());
 
-        // Note: Actual cancellation logic will be tested after BookingService implementation
+        verify(bookingService, times(1)).cancelBooking(bookingId);
     }
 }

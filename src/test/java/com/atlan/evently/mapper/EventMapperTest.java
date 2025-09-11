@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-
+import java.util.*;
 class EventMapperTest {
 
     private final EventMapper mapper = EventMapper.INSTANCE;
@@ -16,7 +16,7 @@ class EventMapperTest {
     @Test
     void testToResponseMapping() {
         Event event = new Event();
-        event.setId("1");
+        event.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000")); 
         event.setName("Concert 2025");
         event.setVenue("City Hall");
         event.setStartsAt(ZonedDateTime.now().plusDays(1));

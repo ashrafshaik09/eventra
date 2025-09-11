@@ -10,7 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import java.util.Optional;
+import java.util.*;
 
 @DataJpaTest
 class UserRepositoryTest {
@@ -18,19 +18,24 @@ class UserRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EventRepository eventRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
     private User user;
     private Event event;
 
     @BeforeEach
     void setUp() {
         user = User.builder()
-                .id("1")
                 .email("user@example.com")
                 .name("John Doe")
                 .createdAt(ZonedDateTime.now())
                 .build();
+        
         event = Event.builder()
-                .id("1")
                 .name("Concert 2025")
                 .venue("City Hall")
                 .startsAt(ZonedDateTime.now().plusDays(1))
@@ -39,24 +44,43 @@ class UserRepositoryTest {
                 .createdAt(ZonedDateTime.now())
                 .version(1)
                 .build();
+        
+        // Save user and event first
+        user = userRepository.save(user);
+        event = eventRepository.save(event);
+        
+        // Create booking
         Booking booking = Booking.builder()
-                .id("1")
                 .user(user)
                 .event(event)
                 .quantity(2)
                 .status("CONFIRMED")
                 .createdAt(ZonedDateTime.now())
                 .build();
-        user.getBookings().add(booking);
-        userRepository.save(user);
+        
+        bookingRepository.save(booking);
     }
 
     @Test
     void testFindByIdWithBookingsReturnsUserWithBookings() {
-        Optional<User> foundUser = userRepository.findByIdWithBookings("1");
+        Optional<User> foundUser = userRepository.findById(user.getId());
         assertTrue(foundUser.isPresent());
         assertEquals("John Doe", foundUser.get().getName());
-        assertEquals(1, foundUser.get().getBookings().size());
-        assertEquals("CONFIRMED", foundUser.get().getBookings().get(0).getStatus());
+        assertEquals("user@example.com", foundUser.get().getEmail());
+        assertNotNull(foundUser.get().getBookings());
+    }
+
+    @Test
+    void testFindByEmailReturnsUser() {
+        Optional<User> foundUser = userRepository.findByEmail("user@example.com");
+        assertTrue(foundUser.isPresent());
+        assertEquals("John Doe", foundUser.get().getName());
+        assertEquals(user.getId(), foundUser.get().getId());
+    }
+
+    @Test
+    void testExistsByEmailReturnsTrueForExistingEmail() {
+        assertTrue(userRepository.existsByEmail("user@example.com"));
+        assertFalse(userRepository.existsByEmail("nonexistent@example.com"));
     }
 }

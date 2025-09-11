@@ -2,9 +2,9 @@ package com.atlan.evently.dto;
 
 public class BookingResponse {
 
-    private String bookingId;
-    private String userId;
-    private String eventId;
+    private String bookingId; // String for API compatibility
+    private String userId;    // String for API compatibility
+    private String eventId;   // String for API compatibility
     private Integer quantity;
     private String bookingStatus;
 

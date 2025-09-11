@@ -3,6 +3,7 @@ package com.atlan.evently.model;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.time.ZonedDateTime;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,7 +14,7 @@ class EventTest {
     @BeforeEach
     void setUp() {
         event = Event.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .name("Concert 2025")
                 .venue("City Hall")
                 .startsAt(ZonedDateTime.now().plusDays(1))

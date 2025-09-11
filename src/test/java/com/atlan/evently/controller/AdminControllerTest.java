@@ -38,32 +38,31 @@ class AdminControllerTest {
         request.setStartTime(ZonedDateTime.now().plusDays(1));
         request.setCapacity(100);
         EventResponse response = new EventResponse();
-        response.setEventId("1");
-        when(adminService.createEvent(anyString(), anyString(), any(ZonedDateTime.class), anyInt())).thenReturn(response);
+        response.setEventId("123e4567-e89b-12d3-a456-426614174000"); // Proper UUID string
+        when(adminService.createEvent(any(EventRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/admin/events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"eventName\":\"Concert 2025\",\"venue\":\"City Hall\",\"startTime\":\"2025-09-12T12:00:00Z\",\"capacity\":100}"))
                 .andExpect(status().isCreated());
 
-        verify(adminService, times(1)).createEvent("Concert 2025", "City Hall", ZonedDateTime.parse("2025-09-12T12:00:00Z"), 100);
+        verify(adminService, times(1)).createEvent(any(EventRequest.class));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void testUpdateEventReturnsOk() throws Exception {
-        EventRequest request = new EventRequest();
-        request.setEventName("Updated Concert");
-        request.setVenue("New Venue");
-        request.setStartTime(ZonedDateTime.now().plusDays(2));
-        request.setCapacity(150);
+        String eventId = "123e4567-e89b-12d3-a456-426614174000";
+        EventResponse response = new EventResponse();
+        response.setEventId(eventId);
+        when(adminService.updateEvent(eq(eventId), any(EventRequest.class))).thenReturn(response);
 
-        mockMvc.perform(put("/api/v1/admin/events/1")
+        mockMvc.perform(put("/api/v1/admin/events/" + eventId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"eventName\":\"Updated Concert\",\"venue\":\"New Venue\",\"startTime\":\"2025-09-13T12:00:00Z\",\"capacity\":150}"))
                 .andExpect(status().isOk());
 
-        // Note: Actual update logic will be tested after AdminService implementation
+        verify(adminService, times(1)).updateEvent(eq(eventId), any(EventRequest.class));
     }
 
     @Test
@@ -73,11 +72,7 @@ class AdminControllerTest {
         response.setTotalBookings(50L);
         response.setTotalCapacity(100L);
         response.setUtilizationPercentage("50.00");
-        when(adminService.getAnalytics()).thenReturn(java.util.Map.of(
-                "totalBookings", 50L,
-                "totalCapacity", 100L,
-                "utilizationPercentage", "50.00"
-        ));
+        when(adminService.getAnalytics()).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/admin/events/analytics"))
                 .andExpect(status().isOk());

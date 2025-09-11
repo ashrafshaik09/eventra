@@ -7,10 +7,10 @@ import jakarta.validation.constraints.Positive;
 public class BookingRequest {
 
     @NotBlank(message = "User ID is required")
-    private String userId;
+    private String userId; // String for API compatibility
 
     @NotBlank(message = "Event ID is required")
-    private String eventId;
+    private String eventId; // String for API compatibility
 
     @NotNull(message = "Quantity is required")
     @Positive(message = "Quantity must be positive")

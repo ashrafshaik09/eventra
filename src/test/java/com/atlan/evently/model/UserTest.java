@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.time.ZonedDateTime;
 
+import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserTest {
@@ -13,7 +14,7 @@ class UserTest {
     @BeforeEach
     void setUp() {
         user = User.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .email("user@example.com")
                 .name("John Doe")
                 .createdAt(ZonedDateTime.now())

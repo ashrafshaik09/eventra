@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.ZonedDateTime;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,7 +31,7 @@ class BookingRepositoryTest {
     @BeforeEach
     void setUp() {
         user = User.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .email("user@example.com")
                 .name("John Doe")
                 .createdAt(ZonedDateTime.now())
@@ -39,7 +39,7 @@ class BookingRepositoryTest {
         userRepository.save(user);
 
         event = Event.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .name("Concert 2025")
                 .venue("City Hall")
                 .startsAt(ZonedDateTime.now().plusDays(1))
@@ -51,7 +51,7 @@ class BookingRepositoryTest {
         eventRepository.save(event);
 
         Booking booking1 = Booking.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .user(user)
                 .event(event)
                 .quantity(2)
@@ -59,7 +59,7 @@ class BookingRepositoryTest {
                 .createdAt(ZonedDateTime.now())
                 .build();
         Booking booking2 = Booking.builder()
-                .id("2")
+                .id(UUID.randomUUID())
                 .user(user)
                 .event(event)
                 .quantity(1)

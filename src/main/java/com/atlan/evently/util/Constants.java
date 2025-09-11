@@ -3,13 +3,14 @@ package com.atlan.evently.util;
 public class Constants {
 
     private Constants() {
-        // Private constructor to prevent instantiation
+        throw new IllegalStateException("Utility class");
     }
 
     // Error Codes
     public static final String ERROR_CODE_EVENT_SOLD_OUT = "EVENT_001";
     public static final String ERROR_CODE_VALIDATION_FAILED = "VALIDATION_001";
     public static final String ERROR_CODE_INTERNAL_ERROR = "INTERNAL_001";
+    public static final String ERROR_CODE_INVALID_UUID = "UUID_001";
 
     // Booking Statuses
     public static final String STATUS_CONFIRMED = "CONFIRMED";
@@ -24,4 +25,5 @@ public class Constants {
     // Validation Messages
     public static final String MSG_EVENT_NAME_REQUIRED = "Event name is required";
     public static final String MSG_CAPACITY_POSITIVE = "Capacity must be positive";
+    public static final String MSG_INVALID_UUID_FORMAT = "Invalid UUID format";
 }

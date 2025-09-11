@@ -6,12 +6,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class KafkaConfig {
 
     @Bean
     public KafkaAdmin kafkaAdmin() {
-        return new KafkaAdmin();
+        Map<String, Object> configs = new HashMap<>();
+        // Using default bootstrap servers from application.yml
+        return new KafkaAdmin(configs);
     }
 
     @Bean

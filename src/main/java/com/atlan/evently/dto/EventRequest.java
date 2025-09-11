@@ -1,8 +1,10 @@
 package com.atlan.evently.dto;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+
 import java.time.ZonedDateTime;
 
 public class EventRequest {
@@ -14,6 +16,7 @@ public class EventRequest {
     private String venue;
 
     @NotNull(message = "Start time is required")
+    @Future(message = "Start time must be in the future")
     private ZonedDateTime startTime;
 
     @NotNull(message = "Capacity is required")

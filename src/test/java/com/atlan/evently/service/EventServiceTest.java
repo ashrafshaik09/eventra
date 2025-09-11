@@ -10,7 +10,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-
+import java.util.*;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 
@@ -34,7 +34,7 @@ class EventServiceTest {
     void testGetUpcomingEventsReturnsPagedEvents() {
         ZonedDateTime now = ZonedDateTime.now();
         Event event = Event.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .name("Concert 2025")
                 .venue("City Hall")
                 .startsAt(now.plusDays(1))

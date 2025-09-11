@@ -1,17 +1,16 @@
 package com.atlan.evently.controller;
 
 import com.atlan.evently.dto.EventResponse;
+import com.atlan.evently.exception.EventException;
 import com.atlan.evently.service.EventService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.ZonedDateTime;
 import java.util.Collections;
 
 import static org.mockito.Mockito.*;
@@ -33,35 +32,34 @@ class EventControllerTest {
     @Test
     void testGetEventsReturnsOk() throws Exception {
         Page<EventResponse> page = new PageImpl<>(Collections.singletonList(new EventResponse()));
-        when(eventService.getUpcomingEvents(PageRequest.of(0, 10))).thenReturn(page);
+        when(eventService.getUpcomingEventsAsDto(PageRequest.of(0, 10))).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/events?page=0&size=10"))
                 .andExpect(status().isOk());
 
-        verify(eventService, times(1)).getUpcomingEvents(PageRequest.of(0, 10));
+        verify(eventService, times(1)).getUpcomingEventsAsDto(PageRequest.of(0, 10));
     }
 
     @Test
     void testGetEventByIdReturnsOk() throws Exception {
         EventResponse response = new EventResponse();
         response.setEventId("1");
-        Page<EventResponse> page = new PageImpl<>(Collections.singletonList(response));
-        when(eventService.getUpcomingEvents(Pageable.unpaged())).thenReturn(page);
+        when(eventService.getEventByIdAsDto("1")).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/events/1"))
                 .andExpect(status().isOk());
 
-        verify(eventService, times(1)).getUpcomingEvents(Pageable.unpaged());
+        verify(eventService, times(1)).getEventByIdAsDto("1");
     }
 
     @Test
     void testGetEventByIdReturnsNotFound() throws Exception {
-        Page<EventResponse> page = new PageImpl<>(Collections.emptyList());
-        when(eventService.getUpcomingEvents(Pageable.unpaged())).thenReturn(page);
+        when(eventService.getEventByIdAsDto("999"))
+                .thenThrow(new EventException("Event not found", "EVENT_NOT_FOUND", "Event does not exist"));
 
         mockMvc.perform(get("/api/v1/events/999"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isConflict()); // GlobalExceptionHandler maps EventException to 409
 
-        verify(eventService, times(1)).getUpcomingEvents(Pageable.unpaged());
+        verify(eventService, times(1)).getEventByIdAsDto("999");
     }
 }

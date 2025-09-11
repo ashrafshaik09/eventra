@@ -8,6 +8,7 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
+import java.util.Objects;
 import java.util.Properties;
 
 @Configuration
@@ -32,6 +33,6 @@ public class DatabaseConfig {
 
     @Bean
     public PlatformTransactionManager transactionManager(LocalContainerEntityManagerFactoryBean entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory.getObject());
+        return new JpaTransactionManager(Objects.requireNonNull(entityManagerFactory.getObject()));
     }
 }

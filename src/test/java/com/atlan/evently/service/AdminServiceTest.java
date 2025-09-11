@@ -11,7 +11,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.time.ZonedDateTime;
 import java.util.Collections;
-import java.util.Map;
+
+import com.atlan.evently.dto.*;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,11 +67,11 @@ class AdminServiceTest {
                 Event.builder().capacity(100).build()
         ));
 
-        Map<String, Object> result = adminService.getAnalytics();
+        AnalyticsResponse result = adminService.getAnalytics();
 
         assertNotNull(result);
-        assertEquals(50L, result.get("totalBookings"));
-        assertEquals(100L, result.get("totalCapacity"));
-        assertEquals("50.00", result.get("utilizationPercentage"));
+        assertEquals(50L, result.getTotalBookings());
+        assertEquals(100L, result.getTotalCapacity());
+        assertEquals("50.00", result.getUtilizationPercentage());
     }
 }

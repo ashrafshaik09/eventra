@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import java.time.ZonedDateTime;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,7 +27,7 @@ class EventRepositoryTest {
     void setUp() {
         now = ZonedDateTime.now();
         Event event1 = Event.builder()
-                .id("1")
+                .id(UUID.randomUUID())
                 .name("Concert 2025")
                 .venue("City Hall")
                 .startsAt(now.plusDays(1))
@@ -36,7 +37,7 @@ class EventRepositoryTest {
                 .version(1)
                 .build();
         Event event2 = Event.builder()
-                .id("2")
+                .id(UUID.randomUUID())
                 .name("Workshop 2025")
                 .venue("Community Center")
                 .startsAt(now.minusDays(1))
