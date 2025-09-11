@@ -38,6 +38,19 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Enables security and authorization -->
+        <dependency>
+        <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-test</artifactId>
+  <scope>test</scope>
+</dependency>
+
         <!-- Provides JPA support for database interaction with Spring Data -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

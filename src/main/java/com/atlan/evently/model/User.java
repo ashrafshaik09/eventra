@@ -3,6 +3,8 @@ package com.atlan.evently.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -28,4 +30,8 @@ public class User {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Booking> bookings = new ArrayList<>();
 }

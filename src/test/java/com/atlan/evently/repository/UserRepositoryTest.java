@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.util.Optional;
 
 @DataJpaTest
 class UserRepositoryTest {

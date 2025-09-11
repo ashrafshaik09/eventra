@@ -2,19 +2,17 @@ package com.atlan.evently.service;
 
 import com.atlan.evently.model.Booking;
 import com.atlan.evently.repository.BookingRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @Service
 public class BookingService {
 
     private final BookingRepository bookingRepository;
-
-    public BookingService(BookingRepository bookingRepository) {
-        this.bookingRepository = bookingRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<Booking> getUserBookings(String userId, String status) {

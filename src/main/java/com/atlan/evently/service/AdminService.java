@@ -3,6 +3,9 @@ package com.atlan.evently.service;
 import com.atlan.evently.model.Event;
 import com.atlan.evently.repository.BookingRepository;
 import com.atlan.evently.repository.EventRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,16 +13,12 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@RequiredArgsConstructor
 @Service
 public class AdminService {
 
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
-
-    public AdminService(EventRepository eventRepository, BookingRepository bookingRepository) {
-        this.eventRepository = eventRepository;
-        this.bookingRepository = bookingRepository;
-    }
 
     @Transactional
     public Event createEvent(String name, String venue, ZonedDateTime startsAt, Integer capacity) {
