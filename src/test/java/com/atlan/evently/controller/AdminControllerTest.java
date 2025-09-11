@@ -5,9 +5,10 @@ import com.atlan.evently.dto.BookingResponse;
 import com.atlan.evently.dto.EventRequest;
 import com.atlan.evently.dto.EventResponse;
 import com.atlan.evently.dto.UserResponse;
-import com.atlan.evently.request.UserRegistrationRequest;
+import com.atlan.evently.dto.UserRegistrationRequest; // Fix import
 import com.atlan.evently.service.AdminService;
 import com.atlan.evently.service.BookingService;
+import com.atlan.evently.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -29,12 +30,15 @@ class AdminControllerTest {
     private MockMvc mockMvc;
     private AdminService adminService;
     private BookingService bookingService;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
         adminService = mock(AdminService.class);
         bookingService = mock(BookingService.class);
-        AdminController adminController = new AdminController(adminService, bookingService);
+        userService = mock(UserService.class);
+        // Fix constructor call - add UserService parameter
+        AdminController adminController = new AdminController(adminService, bookingService, userService);
         mockMvc = MockMvcBuilders.standaloneSetup(adminController).build();
     }
 

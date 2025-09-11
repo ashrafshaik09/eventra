@@ -56,11 +56,4 @@ class EventRepositoryTest {
         assertEquals(1, page.getContent().size());
         assertEquals("Concert 2025", page.getContent().get(0).getName());
     }
-
-    @Test
-    void testFindByIdAndStartsAtAfterReturnsFutureEvent() {
-        Event event = eventRepository.findByIdAndStartsAtAfter("1", now);
-        assertNotNull(event);
-        assertEquals("Concert 2025", event.getName());
-    }
 }

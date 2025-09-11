@@ -63,9 +63,9 @@ class UserControllerTest {
         when(userService.getUserById(userId)).thenReturn(mockResponse);
 
         mockMvc.perform(get("/api/v1/users/" + userId))
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.userId").value(userId))
-                .andExpected(jsonPath("$.name").value("John Doe"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.name").value("John Doe"));
 
         verify(userService, times(1)).getUserById(userId);
     }
@@ -76,8 +76,8 @@ class UserControllerTest {
         when(userService.isEmailRegistered(email)).thenReturn(true);
 
         mockMvc.perform(get("/api/v1/users/check-email/" + email))
-                .andExpected(status().isOk())
-                .andExpected(content().string("true"));
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
 
         verify(userService, times(1)).isEmailRegistered(email);
     }

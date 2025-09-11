@@ -40,12 +40,17 @@ public class AdminService {
     private final BookingMapper bookingMapper;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final EventService eventService; // Add reference to EventService
 
     @Transactional
     public EventResponse createEvent(EventRequest request) {
         validateEventRequest(request);
         Event event = eventMapper.toEntity(request);
         Event savedEvent = eventRepository.save(event);
+        
+        // Invalidate events cache when new event is created
+        eventService.evictEventCaches();
+        
         return eventMapper.toResponse(savedEvent);
     }
 
@@ -66,6 +71,11 @@ public class AdminService {
         existingEvent.setAvailableSeats(request.getCapacity()); // Reset available seats for simplicity
 
         Event savedEvent = eventRepository.save(existingEvent);
+        
+        // Invalidate specific event cache and events list
+        eventService.evictEventCache(eventId);
+        eventService.evictEventCaches();
+        
         return eventMapper.toResponse(savedEvent);
     }
 
