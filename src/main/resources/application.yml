@@ -99,12 +99,19 @@ evently:
   booking:
     "max-tickets-per-request": 10
     "cancellation-deadline-hours": 2
+  waitlist:
+    "booking-window-minutes": 10
+    "max-position": 100
+    "cleanup-interval-minutes": 5
   notifications:
     enabled: true
     topics:
       "booking-events": "booking-events"
       "waitlist-events": "waitlist-events"
       "analytics-events": "analytics-events"
+    email:
+      "from-address": "noreply@evently.com"
+      "from-name": "Evently Platform"
 
 management:
   endpoints:
