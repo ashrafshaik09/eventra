@@ -1,16 +1,17 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
+  # ========== DATABASE CONFIGURATION ==========
   datasource:
-    url: jdbc:postgresql://localhost:5432/evently-db
-    username: postgres
-    password: klu@321
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/evently-db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:klu@321}
     driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: EventlyHikariPool
-      maximum-pool-size: 50
-      minimum-idle: 10
+      maximum-pool-size: ${DATABASE_POOL_SIZE:50}
+      minimum-idle: ${DATABASE_MIN_IDLE:10}
       connection-timeout: 20000
       idle-timeout: 300000
       max-lifetime: 1200000
@@ -18,6 +19,7 @@ spring:
       connection-test-query: SELECT 1
       auto-commit: false
 
+  # ========== JPA/HIBERNATE CONFIGURATION ==========
   jpa:
     hibernate:
       ddl-auto: none
@@ -32,26 +34,29 @@ spring:
         order_updates: true
     "open-in-view": false
 
+  # ========== REDIS CONFIGURATION ==========
   data:
     redis:
-      host: localhost
-      port: 6379
-      # password: ""
-      database: 0
-      timeout: 2000ms
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: ${REDIS_TIMEOUT:2000}ms
       lettuce:
         pool:
-          "max-active": 50
+          "max-active": ${REDIS_POOL_MAX_ACTIVE:50}
           "max-idle": 10
           "min-idle": 5
           "max-wait": 2000ms
 
+  # ========== CACHE CONFIGURATION ==========
   cache:
     type: redis
     redis:
-      "time-to-live": 300000
+      "time-to-live": ${EVENTLY_CACHE_DEFAULT_TTL:300000}
       "cache-null-values": false
 
+  # ========== FLYWAY CONFIGURATION ==========
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -59,10 +64,11 @@ spring:
     mixed: true
     "validate-on-migrate": true
 
+  # ========== KAFKA CONFIGURATION ==========
   kafka:
-    "bootstrap-servers": localhost:9092
+    "bootstrap-servers": ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      "group-id": evently-consumer-group
+      "group-id": ${KAFKA_CONSUMER_GROUP_ID:evently-consumer-group}
       "auto-offset-reset": earliest
       "enable-auto-commit": false
       "key-deserializer": org.apache.kafka.common.serialization.StringDeserializer
@@ -86,78 +92,95 @@ spring:
       "ack-mode": manual
       concurrency: 3
 
-  main:
-    "banner-mode": off
-
-  # Mail configuration for MailHog (local development)
+  # ========== MAIL CONFIGURATION ==========
   mail:
-    host: localhost
-    port: 1025
-    username: ""
-    password: ""
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: false
+          auth: ${MAIL_SMTP_AUTH:false}
           starttls:
-            enable: false
+            enable: ${MAIL_SMTP_STARTTLS:false}
         debug: false
 
-# Application-specific configuration
+  # ========== SECURITY CONFIGURATION ==========
+  security:
+    jwt:
+      secret: ${JWT_SECRET_KEY:dev_secret_key_change_in_production}
+      expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+  main:
+    "banner-mode": off
+
+# ========== EVENTLY APPLICATION CONFIGURATION ==========
 evently:
+  # Cache Configuration
   cache:
     events:
-      ttl: 300
+      ttl: ${EVENTLY_CACHE_EVENTS_TTL:300}
     "event-details":
-      ttl: 600
+      ttl: ${EVENTLY_CACHE_EVENT_DETAILS_TTL:600}
+
+  # Booking Configuration
   booking:
-    "max-tickets-per-request": 10
-    "cancellation-deadline-hours": 2
+    "max-tickets-per-request": ${EVENTLY_BOOKING_MAX_TICKETS:10}
+    "cancellation-deadline-hours": ${EVENTLY_BOOKING_CANCELLATION_DEADLINE_HOURS:2}
+
+  # Waitlist Configuration
   waitlist:
-    "booking-window-minutes": 10
-    "max-position": 100
+    "booking-window-minutes": ${EVENTLY_WAITLIST_BOOKING_WINDOW_MINUTES:10}
+    "max-position": ${EVENTLY_WAITLIST_MAX_POSITION:100}
     "cleanup-interval-minutes": 5
+
+  # Notification Configuration
   notifications:
     enabled: true
-    topics:
-      "booking-events": "booking-events"
-      "waitlist-events": "waitlist-events"
-      "analytics-events": "analytics-events"
     email:
-      "from-address": "noreply@evently.com"
-      "from-name": "Evently Platform"
-      "template-path": "classpath:/email-templates/"
+      "from-address": ${EVENTLY_EMAIL_FROM_ADDRESS:noreply@evently.com}
+      "from-name": ${EVENTLY_EMAIL_FROM_NAME:Evently Platform}
 
+  # Security Configuration
+  security:
+    "admin-token": ${ADMIN_TOKEN:admin-secret}
+    "cors-allowed-origins": ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+
+# ========== ACTUATOR/MONITORING CONFIGURATION ==========
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,caches,configprops
+        include: ${MANAGEMENT_ENDPOINTS:health,info,metrics,prometheus,caches,configprops}
   endpoint:
     health:
       "show-details": when_authorized
     metrics:
-      access: unrestricted
+      enabled: ${METRICS_ENABLED:true}
   prometheus:
     metrics:
       export:
-        enabled: true
+        enabled: ${METRICS_ENABLED:true}
   info:
     env:
       enabled: true
 
+# ========== LOGGING CONFIGURATION ==========
 logging:
   level:
-    "[com.atlan.evently]": INFO
-    "[org.springframework.cache]": DEBUG
-    "[org.springframework.kafka]": INFO
-    "[com.zaxxer.hikari]": INFO
+    root: ${LOG_LEVEL_ROOT:INFO}
+    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:INFO}
+    "[org.springframework.cache]": ${LOG_LEVEL_CACHE:INFO}
+    "[org.springframework.kafka]": ${LOG_LEVEL_KAFKA:INFO}
+    "[com.zaxxer.hikari]": ${LOG_LEVEL_HIKARI:INFO}
+    "[org.springframework.security]": ${LOG_LEVEL_SECURITY:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
 
 ---
 
-# Production Profile
+# ========== PRODUCTION PROFILE ==========
 spring:
   config:
     activate:
@@ -165,15 +188,15 @@ spring:
 
   datasource:
     hikari:
-      "maximum-pool-size": 100
-      "minimum-idle": 20
+      "maximum-pool-size": ${DATABASE_POOL_SIZE:100}
+      "minimum-idle": ${DATABASE_MIN_IDLE:20}
       "leak-detection-threshold": 30000
 
   data:
     redis:
       lettuce:
         pool:
-          "max-active": 100
+          "max-active": ${REDIS_POOL_MAX_ACTIVE:100}
           "max-idle": 20
 
   cache:
@@ -182,18 +205,23 @@ spring:
 
   flyway:
     mixed: true
-    "out-of-order": true
+    "out-of-order": false
+    "validate-on-migrate": true
+
+  # Production Security
+  security:
+    require-ssl: true
 
 logging:
   level:
-    "[com.atlan.evently]": INFO
-    root: WARN
+    root: ${LOG_LEVEL_ROOT:WARN}
+    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:INFO}
   file:
     name: logs/evently.log
 
 ---
 
-# Development Profile
+# ========== DEVELOPMENT PROFILE ==========
 spring:
   config:
     activate:
@@ -202,7 +230,7 @@ spring:
   jpa:
     properties:
       hibernate:
-        show_sql: true
+        show_sql: ${LOG_LEVEL_SQL:false}
         format_sql: true
 
   flyway:
@@ -210,9 +238,41 @@ spring:
 
 logging:
   level:
-    "[com.atlan.evently]": DEBUG
+    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:DEBUG}
     "[org.springframework.cache]": DEBUG
     "[org.springframework.kafka]": DEBUG
-    "[org.springframework]": DEBUG
-    "[org.hibernate]": DEBUG
+    "[org.springframework]": INFO
+    "[org.hibernate]": INFO
+
+---
+
+# ========== TEST PROFILE ==========
+spring:
+  config:
+    activate:
+      "on-profile": test
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: false
+
+  cache:
+    type: simple
+
+  kafka:
+    "bootstrap-servers": ${spring.embedded.kafka.brokers}
+
+logging:
+  level:
+    "[com.atlan.evently]": DEBUG
 
