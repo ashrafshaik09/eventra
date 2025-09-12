@@ -95,537 +95,501 @@
    open http://localhost:8080/swagger-ui.html
    ```
 
-## 📋 **Complete API Reference - All Features Implemented**
+## 📋 **Complete REST API Endpoints Reference**
 
-### 🌟 **Core User Features (MVP)**
+### 🌟 **Core User Endpoints**
 
-#### **1. Browse Events (Cached & Paginated)**
-```bash
-# List upcoming events with Redis caching
+#### **Events (Public Access)**
+```http
+# List upcoming events (paginated & cached)
 GET /api/v1/events?page=0&size=20&sort=startsAt,asc
+# Response: Page<EventResponse> with event details
 
-{
-  "content": [
-    {
-      "eventId": "event-uuid",
-      "name": "Spring Concert 2025",
-      "venue": "Central Park",
-      "startTime": "2025-06-15T19:00:00Z",
-      "capacity": 500,
-      "availableSeats": 342
-    }
-  ],
-  "pageable": {...},
-  "totalElements": 15
-}
+# Get specific event details
+GET /api/v1/events/{eventId}
+# Response: EventResponse with capacity and availability
+# Status: 200 OK | 404 Not Found
 ```
 
-#### **2. Atomic Ticket Booking (Concurrency-Safe)**
-```bash
-# Book tickets with multi-layered concurrency protection
+#### **User Management (Public for MVP)**
+```http
+# Register new user
+POST /api/v1/users/register
+# Body: UserRegistrationRequest (name, email, password)
+# Response: UserResponse with userId
+# Status: 201 Created | 400 Bad Request | 409 Email exists
+
+# User login
+POST /api/v1/users/login  
+# Body: UserLoginRequest (email, password)
+# Response: UserResponse with authentication details
+# Status: 200 OK | 401 Unauthorized
+
+# Check email availability
+GET /api/v1/users/check-email/{email}
+# Response: {"available": true/false}
+# Status: 200 OK
+
+# Get user profile
+GET /api/v1/users/{userId}
+# Response: UserResponse
+# Status: 200 OK | 404 Not Found
+
+# Update user profile
+PUT /api/v1/users/{userId}
+# Body: UserUpdateRequest
+# Response: UserResponse
+# Status: 200 OK | 404 Not Found
+```
+
+### 🎫 **Booking & Waitlist Endpoints**
+
+#### **Booking Operations**
+```http
+# Create booking (Atomic & Concurrency-Safe)
 POST /api/v1/bookings
-{
-  "userId": "user-uuid",
-  "eventId": "event-uuid", 
-  "quantity": 2,
-  "idempotencyKey": "unique-request-id"
-}
+# Body: {
+#   "userId": "user-uuid",
+#   "eventId": "event-uuid", 
+#   "quantity": 2,
+#   "idempotencyKey": "unique-request-id" // Optional for retry safety
+# }
+# Response: BookingResponse with bookingId and status
+# Status: 201 Created | 400 Bad Request | 409 Event sold out
 
-# Success (201 Created)
-{
-  "bookingId": "booking-uuid",
-  "bookingStatus": "CONFIRMED"
-}
-
-# Event sold out (409 Conflict) -> Automatic waitlist suggestion
-{
-  "status": 409,
-  "message": "Event sold out",
-  "errorCode": "EVENT_SOLD_OUT",
-  "details": "Join waitlist: POST /api/v1/bookings/events/{eventId}/waitlist"
-}
-```
-
-#### **3. Booking History & Management**
-```bash
-# View complete booking history
+# Get user booking history
 GET /api/v1/bookings/users/{userId}?status=CONFIRMED
+# Query params: status (CONFIRMED|CANCELLED)
+# Response: List<BookingResponse>
+# Status: 200 OK
 
-# Cancel booking (atomic seat restoration)
-DELETE /api/v1/bookings/{bookingId}  # 204 No Content
+# Cancel booking
+DELETE /api/v1/bookings/{bookingId}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 409 Cannot cancel
 ```
 
-### 🎯 **Advanced Waitlist System (NEW)**
-
-#### **4. Join Waitlist (FIFO Queue)**
-```bash
-# Join waitlist when event is sold out
+#### **Waitlist Operations (FIFO Queue)**
+```http
+# Join waitlist for sold-out event
 POST /api/v1/bookings/events/{eventId}/waitlist
-{
-  "userId": "user-uuid"
-}
+# Body: {"userId": "user-uuid"}
+# Response: WaitlistResponse with position in queue
+# Status: 201 Created | 409 Event has seats available
 
-# Response: Current position in queue
-{
-  "waitlistId": "waitlist-uuid",
-  "position": 5,
-  "status": "WAITING",
-  "createdAt": "2025-01-11T20:15:30Z"
-}
-```
-
-#### **5. Waitlist Management**
-```bash
-# Check waitlist position
+# Get waitlist position for event
 GET /api/v1/bookings/events/{eventId}/waitlist/position?userId={userId}
+# Response: WaitlistResponse with current position
+# Status: 200 OK | 404 Not on waitlist
 
-# View all user waitlists
+# Get all user waitlist entries
 GET /api/v1/bookings/users/{userId}/waitlist
+# Response: List<WaitlistResponse> across all events
+# Status: 200 OK
 
-# Leave waitlist (position adjustment for others)
+# Leave waitlist
 DELETE /api/v1/bookings/waitlist/{waitlistId}
+# Response: Empty (positions auto-adjust for others)
+# Status: 204 No Content | 404 Not Found | 409 Cannot leave (notified)
 
 # Convert waitlist to booking (after notification)
 POST /api/v1/bookings/waitlist/{waitlistId}/convert
-{
-  "userId": "user-uuid",
-  "eventId": "event-uuid",
-  "quantity": 1
-}
+# Body: BookingRequest (same as regular booking)
+# Response: BookingResponse
+# Status: 201 Created | 400 Bad Request | 409 Expired/No seats
 ```
 
-### 🔔 **Multi-Channel Notification System (NEW)**
+### 🔔 **Notification Endpoints**
 
-#### **6. In-App Notifications**
-```bash
+#### **In-App Notifications**
+```http
 # Get user notifications
-GET /api/v1/notifications/users/{userId}
+GET /api/v1/notifications/users/{userId}?limit=20
+# Response: List<NotificationResponse>
+# Status: 200 OK
 
 # Get unread notifications only
 GET /api/v1/notifications/users/{userId}/unread
+# Response: List<NotificationResponse>
+# Status: 200 OK
 
-# Get unread count (for badges)
+# Get unread notification count
 GET /api/v1/notifications/users/{userId}/count
-# Response: {"unreadCount": 3}
+# Response: {"unreadCount": 5}
+# Status: 200 OK
 
 # Mark notification as read
 PUT /api/v1/notifications/{notificationId}/read
+# Response: Empty
+# Status: 204 No Content | 404 Not Found
 
-# Mark all as read
+# Mark all notifications as read for user
 PUT /api/v1/notifications/users/{userId}/read-all
+# Response: Empty
+# Status: 204 No Content
 ```
 
-#### **7. Real-time WebSocket Notifications**
+### 🔧 **Admin Endpoints** (Require `X-Admin-Token` header)
+
+#### **Event Management**
+```http
+# Create new event
+POST /api/v1/admin/events
+# Headers: X-Admin-Token: {admin-secret}
+# Body: EventRequest (eventName, venue, startTime, capacity)
+# Response: EventResponse with eventId
+# Status: 201 Created | 400 Bad Request | 403 Forbidden
+
+# Update existing event
+PUT /api/v1/admin/events/{eventId}
+# Headers: X-Admin-Token: {admin-secret}
+# Body: EventRequest
+# Response: EventResponse
+# Status: 200 OK | 404 Not Found | 403 Forbidden
+
+# Delete event (admin only)
+DELETE /api/v1/admin/events/{eventId}
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 403 Forbidden
+```
+
+#### **Analytics & Reports**
+```http
+# Get comprehensive booking analytics
+GET /api/v1/admin/events/analytics
+# Headers: X-Admin-Token: {admin-secret}
+# Response: AnalyticsResponse with:
+#   - totalBookings, totalCapacity, utilizationPercentage
+#   - mostPopularEvents[], soldOutEvents count
+# Status: 200 OK | 403 Forbidden
+
+# Get popular events ranking
+GET /api/v1/admin/events/popular?limit=10
+# Headers: X-Admin-Token: {admin-secret}
+# Response: List<PopularEventResponse>
+# Status: 200 OK | 403 Forbidden
+```
+
+#### **Booking Management (Admin Oversight)**
+```http
+# Get all bookings with filters
+GET /api/v1/admin/bookings?status=CONFIRMED&eventId={eventId}
+# Headers: X-Admin-Token: {admin-secret}
+# Query params: status, eventId (optional filters)
+# Response: List<BookingResponse>
+# Status: 200 OK | 403 Forbidden
+
+# Get booking details by ID
+GET /api/v1/admin/bookings/{bookingId}
+# Headers: X-Admin-Token: {admin-secret}
+# Response: BookingResponse with full details
+# Status: 200 OK | 404 Not Found | 403 Forbidden
+
+# Admin cancel booking (override)
+DELETE /api/v1/admin/bookings/{bookingId}
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 403 Forbidden
+
+# Get user bookings (admin view)
+GET /api/v1/admin/bookings/users/{userId}
+# Headers: X-Admin-Token: {admin-secret}
+# Response: List<BookingResponse>
+# Status: 200 OK | 403 Forbidden
+```
+
+#### **User Management (Admin)**
+```http
+# Get all users (paginated)
+GET /api/v1/admin/users?page=0&size=20&role=USER&isActive=true
+# Headers: X-Admin-Token: {admin-secret}
+# Query params: role (USER|ADMIN), isActive (true|false)
+# Response: Page<UserResponse>
+# Status: 200 OK | 403 Forbidden
+
+# Create user (admin)
+POST /api/v1/admin/users
+# Headers: X-Admin-Token: {admin-secret}
+# Body: UserRegistrationRequest
+# Response: UserResponse
+# Status: 201 Created | 400 Bad Request | 403 Forbidden
+
+# Update user (admin)
+PUT /api/v1/admin/users/{userId}
+# Headers: X-Admin-Token: {admin-secret}
+# Body: UserUpdateRequest
+# Response: UserResponse
+# Status: 200 OK | 404 Not Found | 403 Forbidden
+
+# Promote user to admin
+PUT /api/v1/admin/users/{userId}/promote
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 403 Forbidden
+
+# Deactivate user
+PUT /api/v1/admin/users/{userId}/deactivate
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 403 Forbidden
+
+# Delete user (soft delete)
+DELETE /api/v1/admin/users/{userId}
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Empty
+# Status: 204 No Content | 404 Not Found | 403 Forbidden
+
+# Search users
+GET /api/v1/admin/users/search?q={query}&page=0&size=20
+# Headers: X-Admin-Token: {admin-secret}
+# Response: Page<UserResponse>
+# Status: 200 OK | 403 Forbidden
+```
+
+#### **Waitlist Management (Admin)**
+```http
+# Get waitlist for specific event
+GET /api/v1/admin/events/{eventId}/waitlist
+# Headers: X-Admin-Token: {admin-secret}
+# Response: List<WaitlistResponse> ordered by position
+# Status: 200 OK | 403 Forbidden
+
+# Get waitlist statistics
+GET /api/v1/admin/waitlist/stats
+# Headers: X-Admin-Token: {admin-secret}
+# Response: WaitlistStatsResponse
+# Status: 200 OK | 403 Forbidden
+```
+
+### 🔍 **System & Monitoring Endpoints** (Public)
+
+#### **Health & Metrics**
+```http
+# Application health check
+GET /actuator/health
+# Response: {"status": "UP", "components": {...}}
+# Status: 200 OK
+
+# Detailed health with DB/Redis/Kafka status
+GET /actuator/health/db
+GET /actuator/health/redis  
+GET /actuator/health/kafka
+# Status: 200 OK
+
+# Prometheus metrics
+GET /actuator/metrics
+GET /actuator/metrics/hikaricp.connections.active
+GET /actuator/metrics/cache.gets
+GET /actuator/metrics/bookings.created.total
+# Response: Metrics in Prometheus format
+# Status: 200 OK
+
+# Cache management
+GET /actuator/caches
+# Response: Available caches and statistics
+# Status: 200 OK
+```
+
+#### **API Documentation**
+```http
+# Interactive Swagger UI
+GET /swagger-ui.html
+# Browser-based API explorer with request/response examples
+
+# OpenAPI specification (JSON)
+GET /v3/api-docs
+# Response: Complete OpenAPI 3.0 specification
+# Status: 200 OK
+```
+
+### 🔄 **Real-time WebSocket Endpoints**
+
+#### **Notification WebSocket**
 ```javascript
-// Connect to WebSocket endpoint
+// WebSocket connection for real-time notifications
 const socket = new SockJS('http://localhost:8080/ws/notifications');
 const stompClient = Stomp.over(socket);
 
-stompClient.connect({}, function() {
-    // Subscribe to user-specific notifications
-    stompClient.subscribe('/user/{userId}/notifications', function(message) {
-        const notification = JSON.parse(message.body);
-        console.log('Real-time notification:', notification);
-        
-        if (notification.type === 'WAITLIST_SEAT_AVAILABLE') {
-            showUrgentNotification(notification.message, notification.bookingUrl);
-        }
-    });
+// Subscribe to user-specific notifications
+stompClient.subscribe('/user/{userId}/notifications', function(message) {
+    const notification = JSON.parse(message.body);
+    // Handle real-time notification (waitlist, booking updates, etc.)
 });
 
-// Notification format
-{
-  "type": "WAITLIST_SEAT_AVAILABLE",
-  "title": "Seat Available!",
-  "message": "A seat is now available for 'Spring Concert 2025'. Book within 8 minutes!",
-  "eventId": "event-uuid",
-  "bookingUrl": "/book?eventId=...",
-  "expiresAt": "2025-01-11T20:25:30Z"
-}
+// Notification types:
+// - WAITLIST_SEAT_AVAILABLE: Urgent seat availability 
+// - BOOKING_CONFIRMED: Booking confirmation
+// - BOOKING_CANCELLED: Booking cancellation
 ```
 
-#### **8. Email Notifications (MailHog Integration)**
-```bash
-# Emails are automatically sent for:
-# - Waitlist seat available (urgent, 10-minute window)
-# - Booking confirmations
-# - Booking cancellations
+## 🔐 **Authentication & Headers**
 
-# View emails in MailHog during development
-open http://localhost:8025
+### **Required Headers**
+```http
+# Admin endpoints
+X-Admin-Token: admin-secret
 
-# Email content includes:
-# ✅ Professional templates with clear CTAs
-# ✅ Event details, booking windows, direct links
-# ✅ Expiration times for time-sensitive notifications
+# Content type for POST/PUT requests
+Content-Type: application/json
+
+# Optional idempotency for booking requests
+X-Idempotency-Key: unique-key-per-request
+
+# CORS headers (automatically handled)
+Origin: http://localhost:3000
 ```
 
-### 🔧 **Enhanced Admin Features**
+### **Authentication Levels**
+- **🌍 Public**: Events listing, user registration, health checks
+- **👤 User**: Bookings, notifications, profile (currently public for MVP)
+- **🔒 Admin**: Event management, analytics, user oversight (X-Admin-Token required)
 
-#### **9. Advanced Analytics**
-```bash
-# Comprehensive booking analytics
-GET /api/v1/admin/events/analytics
+## 📊 **Response Formats**
 
-{
-  "totalBookings": 1247,
-  "totalCapacity": 2500,
-  "utilizationPercentage": "49.88",
-  "soldOutEvents": 2,
-  "mostPopularEvents": [
-    {
-      "eventId": "event-1",
-      "eventName": "Spring Concert 2025",
-      "totalBookings": 500,
-      "capacity": 500,
-      "utilizationPercentage": "100.00"
-    }
-  ]
-}
-```
-
-#### **10. Event & Waitlist Management**
-```bash
-# View waitlist for any event (admin)
-GET /api/v1/admin/events/{eventId}/waitlist
-
-# Complete user management
-GET /api/v1/admin/users?role=USER&isActive=true
-POST /api/v1/admin/users
-PUT /api/v1/admin/users/{id}/promote
-DELETE /api/v1/admin/users/{id}
-
-# Booking oversight
-GET /api/v1/admin/bookings?status=CONFIRMED&eventId={eventId}
-DELETE /api/v1/admin/bookings/{id}  # Admin override
-```
-
-## 🔄 **Event-Driven Architecture Flow**
-
-### Complete Booking Cancellation → Waitlist Notification Flow
-```
-1. User cancels booking
-   ↓
-2. BookingService.cancelBooking()
-   - Updates booking status
-   - Restores seats atomically
-   - Publishes BookingCancelledEvent to Kafka
-   ↓
-3. BookingEventConsumer processes event
-   - Calls WaitlistService.processAvailableSeat()
-   ↓
-4. WaitlistService finds next person in FIFO queue
-   - Updates waitlist status to NOTIFIED
-   - Sets 10-minute expiration window
-   - Publishes WaitlistNotificationEvent to Kafka
-   ↓
-5. WaitlistNotificationConsumer processes notification
-   - Creates in-app notification (database)
-   - Sends real-time WebSocket notification
-   - Sends email via MailHog
-   ↓
-6. User receives triple notification:
-   - Browser notification (if online)
-   - Email notification (reliable)
-   - In-app notification (persistent)
-   ↓
-7. User has 10 minutes to book the available seat
-   - If booked: waitlist marked as CONVERTED
-   - If expired: next person in queue is notified
-```
-
-## 🏗️ **System Architecture Highlights**
-
-### **1. Concurrency Protection (Multi-Layered)**
-```java
-// Primary: Atomic Database Operations
-@Query("UPDATE Event e SET e.availableSeats = e.availableSeats - :quantity 
-       WHERE e.id = :eventId AND e.availableSeats >= :quantity")
-int reserveSeats(@Param("eventId") UUID eventId, @Param("quantity") Integer quantity);
-
-// Secondary: Idempotency Keys
-@Column(name = "idempotency_key", unique = true)
-private String idempotencyKey;
-
-// Tertiary: Optimistic Locking with @Version
-@Version
-@Column(name = "version")
-private Integer version;
-```
-
-### **2. Event-Driven Scalability**
-- **Kafka Topics**: `booking-cancelled`, `waitlist-notification`
-- **KRaft Mode**: No Zookeeper dependency, simplified deployment
-- **Manual Acknowledgment**: Reliable message processing
-- **Partitioned Processing**: Parallel event handling
-
-### **3. Caching Strategy**
-```yaml
-# Redis cache configuration
-events:           # Event listings (high frequency)
-  ttl: 300        # 5 minutes
-event-details:    # Individual events
-  ttl: 600        # 10 minutes
-
-# Cache keys
-events:page-{page}-size-{size}-sort-{sort}
-event-details:{eventId}
-```
-
-### **4. Database Design (Optimized for Scale)**
-```sql
--- Optimized indexes for high-concurrency queries
-CREATE INDEX CONCURRENTLY idx_events_available_seats 
-  ON events (available_seats) WHERE available_seats > 0;
-
-CREATE INDEX CONCURRENTLY idx_waitlist_event_position 
-  ON waitlist (event_id, position) WHERE status = 'WAITING';
-
--- Constraints prevent data corruption
-ALTER TABLE events ADD CONSTRAINT chk_available_seats_non_negative 
-  CHECK (available_seats >= 0);
-
-ALTER TABLE waitlist ADD CONSTRAINT uk_waitlist_user_event 
-  UNIQUE (user_id, event_id);
-```
-
-## 📊 **Performance Benchmarks**
-
-### **Load Testing Results**
-```bash
-# Concurrent booking stress test
-Test Configuration:
-- 1,000 simultaneous booking requests
-- Event capacity: 100 seats
-- Test duration: 30 seconds
-
-Results:
-✅ Successful bookings: 100 (exact capacity)
-✅ Failed requests: 900 (sold out - expected)  
-✅ Zero oversells: PASS
-✅ Average response time: 45ms
-✅ Database connections: 50 (HikariCP pool)
-✅ Cache hit ratio: 95% (event listings)
-✅ Waitlist processing: <5ms per user
-```
-
-### **System Capacity Metrics**
-| **Metric** | **Without Evently** | **With Evently** |
-|------------|---------------------|------------------|
-| **Concurrent Bookings** | ~100/sec (oversells) | ~2,000/sec (safe) |
-| **Event List API** | ~200ms (DB query) | ~5ms (Redis cache) |
-| **Database Connections** | 10 (default) | 50 (optimized) |
-| **Cache Hit Ratio** | 0% | 95% |
-| **Waitlist Processing** | N/A | ~500 notifications/sec |
-
-## 🧪 **Testing Strategy**
-
-### **Automated Testing**
-```bash
-# Unit tests (service logic)
-mvn test -Dtest="*ServiceTest"
-
-# Integration tests (with Testcontainers)
-mvn test -Dtest="*IntegrationTest"
-
-# Concurrency stress test
-mvn test -Dtest="ConcurrencyStressTest"
-
-# Kafka integration tests
-mvn test -Dtest="*KafkaTest"
-
-# All tests with coverage report
-mvn clean test jacoco:report
-open target/site/jacoco/index.html
-```
-
-### **Manual Testing Scenarios**
-```bash
-# 1. Complete waitlist flow test
-POST /api/v1/events (create event with capacity 1)
-POST /api/v1/bookings (book the 1 seat)
-POST /api/v1/bookings (should fail - sold out)
-POST /api/v1/bookings/events/{id}/waitlist (join waitlist)
-DELETE /api/v1/bookings/{id} (cancel first booking)
-# → Check MailHog for email notification
-# → Check WebSocket for real-time notification
-# → Check /api/v1/notifications for in-app notification
-
-# 2. Concurrency test
-# Run 50 parallel booking requests for same event
-# Verify exactly correct number succeed
-
-# 3. Analytics verification
-# Create bookings across multiple events
-# Verify analytics show correct popular events and utilization
-```
-
-## 🚀 **Deployment Architecture**
-
-### **Production Deployment**
-```yaml
-# docker-compose.production.yml
-version: '3.8'
-services:
-  evently-app:
-    image: evently:latest
-    environment:
-      - DATABASE_URL=postgresql://prod-db:5432/evently
-      - REDIS_URL=redis://redis-cluster:6379
-      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      - SPRING_PROFILES_ACTIVE=production
-    deploy:
-      replicas: 3
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-```
-
-### **Horizontal Scaling Strategy**
-1. **Load Balancer**: nginx/HAProxy for request distribution
-2. **Multiple App Instances**: Stateless Spring Boot services
-3. **Database**: PostgreSQL with read replicas
-4. **Cache**: Redis Cluster for high availability
-5. **Messaging**: Kafka cluster with multiple brokers
-6. **Monitoring**: Prometheus + Grafana for metrics
-
-## 📈 **Advanced Scalability Features**
-
-### **Future Enhancements Ready**
-- **Database Sharding**: Event-based partitioning by region/date
-- **CQRS Pattern**: Separate read/write models for analytics
-- **Event Sourcing**: Complete audit trail of all operations
-- **Microservices**: Decompose into Event, Booking, Notification services
-- **Rate Limiting**: Redis-based sliding window rate limiting
-- **Circuit Breaker**: Hystrix for fault tolerance
-
-## 🔐 **Security Implementation**
-
-```bash
-# Authentication & Authorization
-X-Admin-Token: admin-secret    # Development
-Authorization: Bearer <jwt>    # Production
-
-# Security features implemented:
-✅ Input validation (Bean Validation)
-✅ SQL injection prevention (parameterized queries)
-✅ CSRF protection disabled for API-only service
-✅ CORS configuration for frontend integration
-✅ Rate limiting ready (Redis + sliding window)
-✅ Circuit breaker ready (Hystrix)
-✅ Error message sanitization
-```
-
-## 📊 **Monitoring & Observability**
-
-```bash
-# Health checks
-GET /actuator/health
-GET /actuator/health/db
-GET /actuator/health/redis
-GET /actuator/health/kafka
-
-# Metrics (Prometheus format)
-GET /actuator/metrics/hikaricp.connections.active
-GET /actuator/metrics/cache.gets
-GET /actuator/metrics/kafka.consumer.records.consumed.total
-
-# Custom business metrics
-GET /actuator/metrics/bookings.created.total
-GET /actuator/metrics/waitlist.notifications.sent.total
-```
-
-### **Structured Logging**
+### **Standard Success Response**
 ```json
 {
-  "timestamp": "2025-01-11T20:15:30.123+05:30",
-  "level": "INFO",
-  "thread": "kafka-consumer-1", 
-  "logger": "WaitlistNotificationConsumer",
-  "message": "Processed waitlist notification",
-  "userId": "user-123",
-  "eventId": "event-456",
-  "waitlistPosition": 1,
-  "traceId": "abc123def456"
+  "eventId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Spring Concert 2025",
+  "venue": "Central Park",
+  "startTime": "2025-06-15T19:00:00Z",
+  "capacity": 500,
+  "availableSeats": 127
 }
 ```
 
-## 🏆 **Creative Features & Innovations**
-
-### **1. Smart Waitlist Priority**
-- Users who've attended previous events get higher priority
-- VIP users automatically move to front of queue
-- Configurable priority algorithms
-
-### **2. Dynamic Pricing Integration Ready**
-- Event capacity hooks for price adjustments
-- Analytics data for demand-based pricing
-- Surge pricing during high demand periods
-
-### **3. Event Recommendation Engine**
-- User booking history analysis
-- Similar event suggestions
-- Personalized event notifications
-
-### **4. Advanced Analytics Dashboard**
-- Real-time booking velocity
-- Conversion rate from waitlist to booking
-- Geographic distribution of bookings
-- Peak booking time analysis
-
-## 🆘 **Troubleshooting Guide**
-
-### **Common Issues & Solutions**
-
-**1. Event Sold Out But Shows Available Seats**
-```bash
-# Check for cache inconsistency
-curl http://localhost:8080/actuator/caches
-# Solution: Clear Redis cache or check TTL settings
+### **Paginated Response**
+```json
+{
+  "content": [...],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "sort": {"sorted": true, "orders": [...]}
+  },
+  "totalElements": 45,
+  "totalPages": 3,
+  "first": true,
+  "last": false
+}
 ```
 
-**2. Waitlist Notifications Not Sent**
-```bash
-# Check Kafka consumer status
-curl http://localhost:8080/actuator/health/kafka
-# Check MailHog for emails
-curl http://localhost:8025/api/v2/messages
+### **Standard Error Response**
+```json
+{
+  "timestamp": "2025-01-11T20:15:30.123Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Event sold out",
+  "errorCode": "EVENT_SOLD_OUT", 
+  "details": "Requested: 5, Available: 2. Join waitlist: POST /api/v1/bookings/events/{eventId}/waitlist",
+  "path": "/api/v1/bookings"
+}
 ```
 
-**3. WebSocket Connection Issues**
+## 🚀 **API Usage Examples**
+
+### **Complete Booking Flow**
 ```bash
-# Verify WebSocket endpoint
-curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
-  http://localhost:8080/ws/notifications
+# 1. List available events
+curl "http://localhost:8080/api/v1/events?page=0&size=10"
+
+# 2. Get specific event details  
+curl "http://localhost:8080/api/v1/events/550e8400-e29b-41d4-a716-446655440000"
+
+# 3. Create booking (with idempotency)
+curl -X POST "http://localhost:8080/api/v1/bookings" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: booking-123-20250111" \
+  -d '{
+    "userId": "123e4567-e89b-12d3-a456-426614174000",
+    "eventId": "550e8400-e29b-41d4-a716-446655440000", 
+    "quantity": 2
+  }'
+
+# 4. Check booking history
+curl "http://localhost:8080/api/v1/bookings/users/123e4567-e89b-12d3-a456-426614174000"
 ```
 
-**4. Database Connection Pool Exhausted**
+### **Waitlist Flow**
 ```bash
-# Monitor connection metrics
-curl http://localhost:8080/actuator/metrics/hikaricp.connections.active
-# Solution: Increase pool size or check for connection leaks
+# 1. Try to book sold-out event (will return 409)
+curl -X POST "http://localhost:8080/api/v1/bookings" -d '{...}' 
+# Response: {"status": 409, "message": "Event sold out"}
+
+# 2. Join waitlist
+curl -X POST "http://localhost:8080/api/v1/bookings/events/550e8400-e29b-41d4-a716-446655440000/waitlist" \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "123e4567-e89b-12d3-a456-426614174000"}'
+
+# 3. Check waitlist position
+curl "http://localhost:8080/api/v1/bookings/events/550e8400-e29b-41d4-a716-446655440000/waitlist/position?userId=123e4567-e89b-12d3-a456-426614174000"
+
+# 4. User gets notified → converts waitlist to booking
+curl -X POST "http://localhost:8080/api/v1/bookings/waitlist/waitlist-uuid/convert" \
+  -H "Content-Type: application/json" \
+  -d '{...booking request...}'
 ```
 
-## 📞 **Support & Contributing**
+### **Admin Operations**
+```bash
+# Admin authentication required for all admin endpoints
+ADMIN_TOKEN="admin-secret"
 
-### **Development Workflow**
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Run full test suite (`mvn clean test`)
-4. Commit with conventional messages (`git commit -m 'feat: add amazing feature'`)
-5. Push and create Pull Request
+# Create new event
+curl -X POST "http://localhost:8080/api/v1/admin/events" \
+  -H "X-Admin-Token: $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventName": "Summer Music Festival",
+    "venue": "City Stadium", 
+    "startTime": "2025-07-15T18:00:00Z",
+    "capacity": 1000
+  }'
 
-### **Code Quality Standards**
-- **Java**: Google Java Style Guide
-- **Tests**: Minimum 80% code coverage
-- **Commits**: Conventional commits (feat, fix, docs, refactor)
-- **Documentation**: Update README for any API changes
+# Get analytics
+curl "http://localhost:8080/api/v1/admin/events/analytics" \
+  -H "X-Admin-Token: $ADMIN_TOKEN"
 
----
+# View all bookings
+curl "http://localhost:8080/api/v1/admin/bookings?status=CONFIRMED" \
+  -H "X-Admin-Token: $ADMIN_TOKEN"
+```
+
+## 🔧 **Development & Testing**
+
+### **Local API Testing**
+```bash
+# Start the application
+mvn spring-boot:run -Dspring-boot.run.profiles=development
+
+# API base URL
+BASE_URL="http://localhost:8080"
+
+# Health check
+curl "$BASE_URL/actuator/health"
+
+# Interactive API documentation
+open "$BASE_URL/swagger-ui.html"
+
+# View emails (MailHog)
+open "http://localhost:8025"
+```
+
+### **Load Testing Example**
+```bash
+# Concurrent booking stress test
+for i in {1..100}; do
+  curl -X POST "$BASE_URL/api/v1/bookings" \
+    -H "Content-Type: application/json" \
+    -H "X-Idempotency-Key: load-test-$i" \
+    -d "{\"userId\":\"user-$i\",\"eventId\":\"event-123\",\"quantity\":1}" &
+done
+wait
+
+# Expected: Exactly {capacity} successful bookings, rest return 409 Conflict
+```
 
 ## 📄 **System Summary**
 
@@ -697,7 +661,6 @@ DB_PASSWORD=secure-password
 
 # Cache
 REDIS_URL=redis://localhost:6379
-REDIS_PASSWORD=cache-password
 
 # Messaging
 KAFKA_BROKERS=localhost:9092
@@ -790,6 +753,42 @@ curl http://localhost:8080/actuator/metrics/hikaricp.connections.active
 logging:
   level:
     com.atlan.evently: DEBUG
+    org.springframework.transaction: DEBUG
+    com.zaxxer.hikari: DEBUG
+```
+
+## 📞 Support & Contributing
+
+### Getting Help
+- 🐛 **Bug Reports**: Create GitHub issue with reproduction steps
+- 💡 **Feature Requests**: Discuss in GitHub Discussions
+- 📧 **Security Issues**: Email security@evently.com
+
+### Development Workflow
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Run full test suite (`mvn clean test`)
+4. Commit changes (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open Pull Request
+
+### Code Standards
+- **Java**: Follow Google Java Style Guide
+- **Tests**: Minimum 80% code coverage required
+- **Commits**: Use conventional commits (feat, fix, docs, etc.)
+- **Documentation**: Update README for any API changes
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ by the Evently Team**
+
+For questions about this implementation, please reach out or create an issue in the repository.
     org.springframework.transaction: DEBUG
     com.zaxxer.hikari: DEBUG
 ```

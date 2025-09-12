@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  evently-app:
+    image: evently:latest
+    env_file:
+      - .env.production
+    ports:
+      - "8080:8080"
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - evently-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+# Production infra (assume managed services or external hosts) - placeholders only.
+# In production you will likely use managed Postgres/Redis/Kafka; do NOT run these via compose.
+networks:
+  evently-net:
+    external: true

@@ -37,6 +37,9 @@ build/
 .env.local
 .env.production
 .env.test
+.env.development
+.env.docker
+
 
 # Logs
 logs/
@@ -58,6 +61,9 @@ Thumbs.db
 # Application specific
 application-secrets.yml
 application-production.yml
+application-docker.yml
+application-test.yml
+application-development.yml
 
 # Test databases
 *.db
