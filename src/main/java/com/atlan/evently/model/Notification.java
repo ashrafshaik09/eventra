@@ -1,26 +1,28 @@
 package com.atlan.evently.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
+/**
+ * Entity for storing in-app notifications for users.
+ */
 @Entity
-@Table(name = "notifications", indexes = {
-    @Index(name = "idx_notifications_user_read", columnList = "user_id, is_read"),
-    @Index(name = "idx_notifications_created_at", columnList = "created_at"),
-    @Index(name = "idx_notifications_expires_at", columnList = "expires_at")
-})
-@Getter
-@Setter
+@Table(name = "notifications")
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Notification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
+    @GeneratedValue
+    @Column(name = "id")
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,48 +30,49 @@ public class Notification {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
+    @Column(name = "type", nullable = false, length = 50)
     private NotificationType type;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(name = "message", nullable = false, length = 1000)
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
-    @Column(name = "action_url")
-    private String actionUrl; // URL to navigate when notification is clicked
+    @Column(name = "action_url", length = 500)
+    private String actionUrl;
 
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead;
+    @Builder.Default
+    private Boolean isRead = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private ZonedDateTime createdAt;
+    @Builder.Default
+    private ZonedDateTime createdAt = ZonedDateTime.now();
 
     @Column(name = "read_at")
     private ZonedDateTime readAt;
 
     @Column(name = "expires_at")
-    private ZonedDateTime expiresAt; // For time-sensitive notifications
+    private ZonedDateTime expiresAt;
 
     @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata; // JSON string for additional data
 
     public enum NotificationType {
+        WAITLIST_SEAT_AVAILABLE,
         BOOKING_CONFIRMED,
         BOOKING_CANCELLED,
-        WAITLIST_SEAT_AVAILABLE,
-        EVENT_UPDATED,
-        GENERAL
-    }
-
-    // Helper methods
-    public boolean isExpired() {
-        return expiresAt != null && ZonedDateTime.now().isAfter(expiresAt);
+        EVENT_REMINDER,
+        SYSTEM_ANNOUNCEMENT
     }
 
     public void markAsRead() {
         this.isRead = true;
         this.readAt = ZonedDateTime.now();
+    }
+
+    public boolean isExpired() {
+        return expiresAt != null && ZonedDateTime.now().isAfter(expiresAt);
     }
 }

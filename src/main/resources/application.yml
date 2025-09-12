@@ -1,3 +1,6 @@
+# ===================================================================
+# COMMON APPLICATION PROPERTIES
+# ===================================================================
 server:
   port: ${SERVER_PORT:8080}
 
@@ -25,7 +28,6 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      # Treat empty REDIS_PASSWORD as null so client won't send AUTH with empty password
       # password: ${REDIS_PASSWORD:#{null}}
       database: ${REDIS_DATABASE:0}
       timeout: ${REDIS_TIMEOUT:2000}ms
@@ -80,11 +82,14 @@ evently:
       ttl: ${EVENTLY_CACHE_EVENTS_TTL:300}
     event-details:
       ttl: ${EVENTLY_CACHE_EVENT_DETAILS_TTL:600}
+    categories:
+      ttl: ${EVENTLY_CACHE_CATEGORIES_TTL:600}
   notifications:
     enabled: true
     email:
       from-address: ${EVENTLY_EMAIL_FROM_ADDRESS:noreply@evently.com}
       from-name: ${EVENTLY_EMAIL_FROM_NAME:Evently Platform}
+    cleanup-expired-hours: 72
   security:
     admin-token: ${ADMIN_TOKEN:admin-secret}
     cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
@@ -94,130 +99,128 @@ management:
   endpoints:
     web:
       exposure:
-        include: ${MANAGEMENT_ENDPOINTS:health,info,metrics,prometheus,caches,configprops}
+        include: ${MANAGEMENT_ENDPOINTS:health,info,metrics,prometheus,caches,configprops,env}
   endpoint:
     health:
       show-details: when_authorized
-    metrics:
-      export:
-        enabled: ${METRICS_ENABLED:true}
-  prometheus:
-    metrics:
-      export:
-        enabled: ${METRICS_ENABLED:true}
+      probes:
+        enabled: true
+  metrics:
+    export:
+      enabled: ${METRICS_ENABLED:true}
+    prometheus:
+      metrics:
+        export:
+          enabled: ${METRICS_ENABLED:true}
   info:
     env:
+      enabled: true
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    kafka:
       enabled: true
 
 # ========== LOGGING DEFAULTS ==========
 logging:
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
-    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:INFO}
-    "[org.springframework.cache]": ${LOG_LEVEL_CACHE:INFO}
-    "[org.springframework.kafka]": ${LOG_LEVEL_KAFKA:INFO}
-    "[com.zaxxer.hikari]": ${LOG_LEVEL_HIKARI:INFO}
-    "[org.springframework.security]": ${LOG_LEVEL_SECURITY:INFO}
+    com.atlan.evently: ${LOG_LEVEL_EVENTLY:INFO}
+    org.springframework.cache: ${LOG_LEVEL_CACHE:INFO}
+    org.springframework.kafka: ${LOG_LEVEL_KAFKA:INFO}
+    com.zaxxer.hikari: ${LOG_LEVEL_HIKARI:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
 
 ---
-
-# ========== PRODUCTION PROFILE ==========
+# ===================================================================
+# PRODUCTION PROFILE
+# ===================================================================
 spring:
   config:
     activate:
       on-profile: production
-
   datasource:
     hikari:
       maximum-pool-size: ${DATABASE_POOL_SIZE:100}
       minimum-idle: ${DATABASE_MIN_IDLE:20}
       leak-detection-threshold: 30000
-
   data:
     redis:
       lettuce:
         pool:
           max-active: ${REDIS_POOL_MAX_ACTIVE:100}
           max-idle: 20
-
   cache:
     redis:
       time-to-live: 600000
-
   flyway:
     mixed: true
     out-of-order: false
     validate-on-migrate: true
-
   security:
     require-ssl: true
 
 logging:
   level:
     root: ${LOG_LEVEL_ROOT:WARN}
-    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:INFO}
+    com.atlan.evently: ${LOG_LEVEL_EVENTLY:INFO}
   file:
     name: logs/evently.log
 
 ---
-
-# ========== DEVELOPMENT PROFILE ==========
+# ===================================================================
+# DEVELOPMENT PROFILE
+# ===================================================================
 spring:
   config:
     activate:
       on-profile: development
-
   jpa:
     properties:
       hibernate:
         show_sql: ${LOG_LEVEL_SQL:false}
         format_sql: true
-
   flyway:
     clean-disabled: false
 
 logging:
   level:
-    "[com.atlan.evently]": ${LOG_LEVEL_EVENTLY:DEBUG}
-    "[org.springframework.cache]": DEBUG
-    "[org.springframework.kafka]": DEBUG
-    "[org.springframework]": INFO
-    "[org.hibernate]": INFO
+    com.atlan.evently: ${LOG_LEVEL_EVENTLY:DEBUG}
+    org.springframework.cache: DEBUG
+    org.springframework.kafka: DEBUG
+    org.springframework: INFO
+    org.hibernate: INFO
 
 ---
-
-# ========== TEST PROFILE ==========
+# ===================================================================
+# TEST PROFILE
+# ===================================================================
 spring:
   config:
     activate:
       on-profile: test
-
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
     password: password
-
   flyway:
     enabled: false
-
   cache:
     type: simple
-
   kafka:
     bootstrap-servers: ${spring.embedded.kafka.brokers}
-
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
         show_sql: ${LOG_LEVEL_SQL:false}
         format_sql: true
-
-server:
   ssl:
-    enabled: true
+    enabled: false

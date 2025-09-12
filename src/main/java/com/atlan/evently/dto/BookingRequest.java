@@ -3,7 +3,14 @@ package com.atlan.evently.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import lombok.Data;
 
+import java.math.BigDecimal;
+
+/**
+ * Enhanced booking request with payment information.
+ */
+@Data
 public class BookingRequest {
 
     @NotBlank(message = "User ID is required")
@@ -18,35 +25,12 @@ public class BookingRequest {
 
     private String idempotencyKey;
 
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public String getIdempotencyKey() {
-        return idempotencyKey;
-    }
-
-    public void setIdempotencyKey(String idempotencyKey) {
-        this.idempotencyKey = idempotencyKey;
-    }
+    // Payment information
+    private String paymentMethod; // CREDIT_CARD, PAYPAL, etc.
+    private String paymentGateway; // STRIPE, PAYPAL, etc.
+    private BigDecimal expectedAmount; // For validation
+    private String currency = "USD";
+    
+    // Payment gateway specific data (flexible JSON)
+    private String paymentData; // JSON string with gateway-specific fields
 }

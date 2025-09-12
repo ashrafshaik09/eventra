@@ -4,13 +4,15 @@ import com.atlan.evently.model.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Repository for Notification entity operations.
+ */
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
@@ -18,17 +20,16 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findByUserIdAndIsReadFalseOrderByCreatedAtDesc(UUID userId);
 
     // Get recent notifications for user (read and unread)
-    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId ORDER BY n.createdAt DESC LIMIT 20")
-    List<Notification> findTop20ByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId);
+    List<Notification> findTop20ByUserIdOrderByCreatedAtDesc(UUID userId);
 
     // Count unread notifications for user
     long countByUserIdAndIsReadFalse(UUID userId);
 
+    // Get notifications by type for user
+    List<Notification> findByUserIdAndTypeOrderByCreatedAtDesc(UUID userId, Notification.NotificationType type);
+
     // Cleanup expired notifications
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.expiresAt < :now")
-    int deleteByExpiresAtBefore(@Param("now") ZonedDateTime now);
-
-    // Get notifications by type for user
-    List<Notification> findByUserIdAndTypeOrderByCreatedAtDesc(UUID userId, Notification.NotificationType type);
+    int deleteByExpiresAtBefore(ZonedDateTime now);
 }

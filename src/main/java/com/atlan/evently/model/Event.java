@@ -1,36 +1,58 @@
 package com.atlan.evently.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+/**
+ * Enhanced Event entity with comprehensive event management features.
+ * Supports both online and offline events with rich metadata.
+ */
 @Entity
-@Table(name = "events", indexes = {
-    @Index(name = "idx_events_starts_at", columnList = "starts_at"),
-    @Index(name = "idx_events_name", columnList = "name"),
-    @Index(name = "idx_events_available_seats", columnList = "available_seats") // For concurrent booking queries
-})
-@Getter
-@Setter
+@Table(name = "events")
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Event {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
+    @GeneratedValue
+    @Column(name = "id")
     private UUID id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "venue", nullable = false)
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "venue", nullable = false, length = 255)
     private String venue;
+
+    @Column(name = "tags", length = 500)
+    private String tags; // Comma-separated tags for search/filtering
+
+    @Column(name = "is_online", nullable = false)
+    @Builder.Default
+    private Boolean isOnline = false;
+
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
 
     @Column(name = "starts_at", nullable = false)
     private ZonedDateTime startsAt;
+
+    @Column(name = "ends_at")
+    private ZonedDateTime endsAt;
 
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
@@ -38,47 +60,85 @@ public class Event {
     @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private ZonedDateTime createdAt;
+    @Column(name = "ticket_price", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal ticketPrice = BigDecimal.ZERO;
 
-    // Optimistic locking for concurrency control
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private ZonedDateTime createdAt = ZonedDateTime.now();
+
     @Version
-    @Column(name = "version", nullable = false)
+    @Column(name = "version")
     private Integer version;
 
-    // Business logic to ensure available_seats does not exceed capacity
-    @PreUpdate
-    @PrePersist
-    public void validateAvailability() {
-        if (availableSeats > capacity) {
-            throw new IllegalStateException("Available seats cannot exceed capacity");
-        }
-        if (availableSeats < 0) {
-            throw new IllegalStateException("Available seats cannot be negative");
-        }
+    // Category relationship
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private EventCategory category;
+
+    // Relationships
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Booking> bookings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<EventLike> likes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<EventComment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Transaction> transactions = new ArrayList<>();
+
+    // Business methods
+    public boolean isActive() {
+        return startsAt.isAfter(ZonedDateTime.now());
     }
 
-    // Helper method to check if booking is possible
-    public boolean canAccommodate(Integer requestedSeats) {
-        return availableSeats != null && requestedSeats != null 
-               && availableSeats >= requestedSeats && requestedSeats > 0;
+    public boolean isSoldOut() {
+        return availableSeats <= 0;
     }
 
-    // Helper method for atomic seat reservation
-    public void reserveSeats(Integer quantity) {
-        if (!canAccommodate(quantity)) {
-            throw new IllegalStateException(
-                String.format("Cannot reserve %d seats. Only %d available.", quantity, availableSeats)
-            );
-        }
-        this.availableSeats -= quantity;
+    public boolean isLive() {
+        ZonedDateTime now = ZonedDateTime.now();
+        return now.isAfter(startsAt) && (endsAt == null || now.isBefore(endsAt));
     }
 
-    // Helper method for seat restoration
-    public void restoreSeats(Integer quantity) {
-        this.availableSeats += quantity;
-        if (this.availableSeats > capacity) {
-            this.availableSeats = capacity; // Safety cap
+    public boolean hasEnded() {
+        return endsAt != null && ZonedDateTime.now().isAfter(endsAt);
+    }
+
+    public int getBookedSeats() {
+        return capacity - availableSeats;
+    }
+
+    public double getUtilizationPercentage() {
+        return capacity > 0 ? ((double) getBookedSeats() / capacity) * 100.0 : 0.0;
+    }
+
+    // Helper methods for tags
+    public List<String> getTagsList() {
+        if (tags == null || tags.trim().isEmpty()) {
+            return new ArrayList<>();
         }
+        return List.of(tags.split(","));
+    }
+
+    public void setTagsList(List<String> tagsList) {
+        this.tags = tagsList != null ? String.join(",", tagsList) : null;
+    }
+
+    // Like count helper
+    public long getLikeCount() {
+        return likes != null ? likes.size() : 0;
+    }
+
+    // Comment count helper
+    public long getCommentCount() {
+        return comments != null ? comments.size() : 0;
     }
 }

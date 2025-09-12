@@ -1,61 +1,61 @@
 package com.atlan.evently.dto;
 
-import java.time.ZonedDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
 
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
+import java.util.List;
+
+/**
+ * Enhanced response DTO for event data with comprehensive event information.
+ */
+@Data
 public class EventResponse {
-    
-    private String eventId; // Keep as String for API/JSON compatibility
+
+    private String eventId;
     private String name;
+    private String description;
     private String venue;
+    private List<String> tags;
+    private Boolean isOnline;
+    private String imageUrl;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     private ZonedDateTime startTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    private ZonedDateTime endTime;
+
     private Integer capacity;
     private Integer availableSeats;
+    private Integer bookedSeats;
+    private BigDecimal ticketPrice;
+    private String currency = "USD";
 
-    public String getEventId() {
-        return eventId;
-    }
+    // Category information
+    private EventCategoryResponse category;
 
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
-    }
+    // Engagement metrics
+    private Long likeCount;
+    private Long commentCount;
+    private Double utilizationPercentage;
 
-    public String getName() {
-        return name;
-    }
+    // Status flags
+    private Boolean isActive;
+    private Boolean isSoldOut;
+    private Boolean isLive;
+    private Boolean hasEnded;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    private ZonedDateTime createdAt;
 
-    public String getVenue() {
-        return venue;
-    }
-
-    public void setVenue(String venue) {
-        this.venue = venue;
-    }
-
-    public ZonedDateTime getStartTime() {
-        return startTime;
-    }
-
-    public void setStartTime(ZonedDateTime startTime) {
-        this.startTime = startTime;
-    }
-
-    public Integer getCapacity() {
-        return capacity;
-    }
-
-    public void setCapacity(Integer capacity) {
-        this.capacity = capacity;
-    }
-
-    public Integer getAvailableSeats() {
-        return availableSeats;
-    }
-
-    public void setAvailableSeats(Integer availableSeats) {
-        this.availableSeats = availableSeats;
+    @Data
+    public static class EventCategoryResponse {
+        private String id;
+        private String name;
+        private String description;
+        private String colorCode;
+        private String iconName;
     }
 }

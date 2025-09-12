@@ -27,6 +27,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.http.HttpMethod;
 
 /**
  * Security configuration for the Evently platform.
@@ -98,25 +99,34 @@ public class SecurityConfig {
                     // Admin endpoints require ADMIN role
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     
+                    // Category management endpoints (admin only)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/categories").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/categories/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasRole("ADMIN")
+                    
                     // Public endpoints - no authentication required
                     .requestMatchers(
-                        "/api/v1/events/**",           // Event browsing
-                        "/api/v1/users/register",     // User registration  
-                        "/api/v1/users/login",        // User login
+                        "/api/v1/events/**",           // Event browsing and enhanced endpoints
+                        "/api/v1/categories",          // Read-only category browsing
+                        "/api/v1/categories/all",      // Category listing
+                        "/api/v1/categories/search",   // Category search
+                        "/api/v1/categories/*",        // Get category by ID
+                        "/api/v1/users/register",      // User registration  
+                        "/api/v1/users/login",         // User login
                         "/api/v1/users/check-email/**", // Email availability check
-                        "/actuator/**",               // Health checks and monitoring
-                        "/swagger-ui/**",             // Swagger UI
-                        "/swagger-ui.html",           // Swagger UI redirect
-                        "/v3/api-docs/**",            // OpenAPI specification
-                        "/ws/**"                      // WebSocket endpoints
+                        "/actuator/**",                // Health checks and monitoring
+                        "/swagger-ui/**",              // Swagger UI
+                        "/swagger-ui.html",            // Swagger UI redirect
+                        "/v3/api-docs/**",             // OpenAPI specification
+                        "/ws/**"                       // WebSocket endpoints
                     ).permitAll()
                     
                     // User-specific endpoints - public for MVP testing
                     // TODO: Add JWT authentication for production
                     .requestMatchers(
-                        "/api/v1/users/**",           // User profile access
-                        "/api/v1/bookings/**",       // Booking operations
-                        "/api/v1/notifications/**"   // Notification access
+                        "/api/v1/users/**",            // User profile access
+                        "/api/v1/bookings/**",        // Booking operations
+                        "/api/v1/notifications/**"    // Notification access
                     ).permitAll()
                     
                     // All other requests require authentication

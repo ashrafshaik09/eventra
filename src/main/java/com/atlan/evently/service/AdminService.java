@@ -49,7 +49,7 @@ public class AdminService {
         Event savedEvent = eventRepository.save(event);
         
         // Invalidate events cache when new event is created
-        eventService.evictEventCaches();
+        eventService.evictAllEventCaches();
         
         return eventMapper.toResponse(savedEvent);
     }
@@ -74,7 +74,7 @@ public class AdminService {
         
         // Invalidate specific event cache and events list
         eventService.evictEventCache(eventId);
-        eventService.evictEventCaches();
+        eventService.evictAllEventCaches();
         
         return eventMapper.toResponse(savedEvent);
     }

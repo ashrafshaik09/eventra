@@ -4,9 +4,6 @@ import com.atlan.evently.dto.EventResponse;
 import com.atlan.evently.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,39 +13,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 /**
- * REST controller for public event browsing operations.
- * 
- * <p>Provides high-performance event discovery endpoints with:
- * <ul>
- *   <li>Redis-cached event listings for 5x performance improvement</li>
- *   <li>Paginated responses for efficient large dataset handling</li>
- *   <li>Real-time seat availability information</li>
- *   <li>Optimized database queries with proper indexing</li>
- * </ul>
- * 
- * <p><strong>Caching Strategy:</strong>
- * - Event listings cached for 5 minutes (95% hit ratio expected)
- * - Individual event details cached for 10 minutes
- * - Cache invalidation on admin event modifications
- * 
- * @author Evently Platform Team
- * @since 1.0.0
- * @see EventService for business logic implementation
+ * Enhanced REST controller for event browsing and discovery.
+ * Provides comprehensive event filtering, search, and categorization.
  */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/events")
-@Tag(name = "Events", 
-     description = """
-         Public event browsing and discovery API.
-         
-         Performance features:
-         • Redis caching (5x faster than database queries)
-         • Optimized pagination for large event catalogs
-         • Real-time seat availability updates
-         • Efficient database indexing on start time and availability
-         """)
+@Tag(name = "Events", description = "Event browsing, discovery, and filtering API")
 public class EventController {
 
     private final EventService eventService;
@@ -92,10 +67,10 @@ public class EventController {
         @ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved upcoming events",
-            content = @Content(
+            content = @io.swagger.v3.oas.annotations.media.Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = Page.class),
-                examples = @ExampleObject(
+                schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Page.class),
+                examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
                     name = "Events List Response",
                     value = """
                         {
@@ -138,8 +113,8 @@ public class EventController {
         @ApiResponse(
             responseCode = "400",
             description = "Invalid pagination parameters",
-            content = @Content(
-                examples = @ExampleObject(
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
                     name = "Invalid Pagination",
                     value = """
                         {
@@ -208,10 +183,10 @@ public class EventController {
         @ApiResponse(
             responseCode = "200",
             description = "Successfully retrieved event details",
-            content = @Content(
+            content = @io.swagger.v3.oas.annotations.media.Content(
                 mediaType = "application/json", 
-                schema = @Schema(implementation = EventResponse.class),
-                examples = @ExampleObject(
+                schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = EventResponse.class),
+                examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
                     name = "Event Details Response",
                     value = """
                         {
@@ -229,8 +204,8 @@ public class EventController {
         @ApiResponse(
             responseCode = "400",
             description = "Invalid event ID format",
-            content = @Content(
-                examples = @ExampleObject(
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
                     name = "Invalid UUID Format",
                     value = """
                         {
@@ -247,8 +222,8 @@ public class EventController {
         @ApiResponse(
             responseCode = "404",
             description = "Event not found or has already started",
-            content = @Content(
-                examples = @ExampleObject(
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
                     name = "Event Not Found",
                     value = """
                         {
@@ -273,5 +248,115 @@ public class EventController {
         
         EventResponse event = eventService.getEventByIdAsDto(eventId);
         return ResponseEntity.ok(event);
+    }
+
+    // ========== ENHANCED EVENT ENDPOINTS ==========
+
+    @GetMapping("/category/{categoryId}")
+    @Operation(summary = "Get events by category", description = "Retrieve events filtered by category")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved events by category"),
+        @ApiResponse(responseCode = "400", description = "Invalid category ID format")
+    })
+    public ResponseEntity<Page<EventResponse>> getEventsByCategory(
+            @Parameter(description = "Category UUID") @PathVariable String categoryId,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.getEventsByCategory(categoryId, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/categories")
+    @Operation(summary = "Get events by multiple categories", description = "Retrieve events filtered by multiple categories")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved events by categories")
+    public ResponseEntity<Page<EventResponse>> getEventsByCategories(
+            @Parameter(description = "Category UUIDs (comma-separated)") @RequestParam List<String> categoryIds,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.getEventsByCategories(categoryIds, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search events", description = "Search events by name, description, or tags")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved search results")
+    public ResponseEntity<Page<EventResponse>> searchEvents(
+            @Parameter(description = "Search query") @RequestParam String q,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.searchEvents(q, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/price-range")
+    @Operation(summary = "Get events by price range", description = "Retrieve events within specified price range")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved events by price range")
+    public ResponseEntity<Page<EventResponse>> getEventsByPriceRange(
+            @Parameter(description = "Minimum price") @RequestParam BigDecimal minPrice,
+            @Parameter(description = "Maximum price") @RequestParam BigDecimal maxPrice,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.getEventsByPriceRange(minPrice, maxPrice, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/online")
+    @Operation(summary = "Get online events", description = "Retrieve only online events")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved online events")
+    public ResponseEntity<Page<EventResponse>> getOnlineEvents(Pageable pageable) {
+        Page<EventResponse> events = eventService.getOnlineEvents(pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/free")
+    @Operation(summary = "Get free events", description = "Retrieve only free events (price = 0)")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved free events")
+    public ResponseEntity<Page<EventResponse>> getFreeEvents(Pageable pageable) {
+        Page<EventResponse> events = eventService.getFreeEvents(pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/available")
+    @Operation(summary = "Get events with available seats", description = "Retrieve events that still have available seats")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved available events")
+    public ResponseEntity<Page<EventResponse>> getAvailableEvents(
+            @Parameter(description = "Minimum available seats") @RequestParam(required = false) Integer minSeats,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.getAvailableEvents(minSeats, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/sold-out")
+    @Operation(summary = "Get sold out events", description = "Retrieve events that are completely sold out")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved sold out events")
+    public ResponseEntity<Page<EventResponse>> getSoldOutEvents(Pageable pageable) {
+        Page<EventResponse> events = eventService.getSoldOutEvents(pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/venue")
+    @Operation(summary = "Get events by venue", description = "Search events by venue name")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved events by venue")
+    public ResponseEntity<Page<EventResponse>> getEventsByVenue(
+            @Parameter(description = "Venue name (partial match)") @RequestParam String venue,
+            Pageable pageable) {
+        Page<EventResponse> events = eventService.getEventsByVenue(venue, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/popular")
+    @Operation(summary = "Get popular events", description = "Retrieve most popular events by booking count")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved popular events")
+    public ResponseEntity<List<EventResponse>> getPopularEvents(
+            @Parameter(description = "Maximum number of events to return") @RequestParam(defaultValue = "10") int limit,
+            Pageable pageable) {
+        List<EventResponse> events = eventService.getMostPopularEvents(limit, pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @GetMapping("/trending")
+    @Operation(summary = "Get trending events", description = "Retrieve events with high engagement (likes + comments)")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved trending events")
+    public ResponseEntity<List<EventResponse>> getTrendingEvents(
+            @Parameter(description = "Maximum number of events to return") @RequestParam(defaultValue = "10") int limit,
+            Pageable pageable) {
+        List<EventResponse> events = eventService.getHighEngagementEvents(limit, pageable);
+        return ResponseEntity.ok(events);
     }
 }

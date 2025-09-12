@@ -27,37 +27,53 @@ services:
     container_name: evently_kafka
     ports:
       - "9092:9092"
-      - "29092:29092"
     environment:
       # KRaft configuration (modern Kafka without Zookeeper)
+      KAFKA_CLUSTER_ID: ${KAFKA_CLUSTER_ID}
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID}
       KAFKA_NODE_ID: 1
+      
+      # Process roles - combined mode for development
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      
+      # Listener configuration
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
       KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      
+      # Storage configuration
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      
+      # Replication factors for single node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      # Auto-create topics for development
+      
+      # Topic configuration
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
-      # Performance tuning
+      
+      # Performance and retention
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
       KAFKA_LOG_RETENTION_BYTES: 1073741824
+      
+      # JVM settings for development
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+      
     volumes:
-      - kafka_data:/tmp/kraft-combined-logs
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 15s
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     networks:
       - evently-network
 
@@ -66,12 +82,15 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: evently_kafka_ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      LOGGING_LEVEL_COM_PROVECTUS: DEBUG
     networks:
       - evently-network
 
@@ -84,7 +103,8 @@ services:
     environment:
       REDIS_HOSTS: local:redis:6379
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - evently-network
 
@@ -99,6 +119,7 @@ services:
       - evently-network
 
 volumes:
-  postgres_data:
   redis_data:
+    driver: local
   kafka_data:
+    driver: local
