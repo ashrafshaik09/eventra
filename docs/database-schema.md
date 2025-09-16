@@ -18,10 +18,10 @@ erDiagram
     %% Core Entities
     USERS {
         uuid id PK
-        varchar(100) name
-        varchar(255) email UK
-        varchar(255) password_hash
-        varchar(20) role
+        varchar name
+        varchar email UK
+        varchar password_hash
+        varchar role
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -29,10 +29,10 @@ erDiagram
     
     EVENT_CATEGORIES {
         uuid id PK
-        varchar(100) name UK
+        varchar name UK
         text description
-        varchar(7) color_code
-        varchar(50) icon_name
+        varchar color_code
+        varchar icon_name
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -40,17 +40,17 @@ erDiagram
     
     EVENTS {
         uuid id PK
-        varchar(255) name
+        varchar name
         text description
-        varchar(255) venue
-        varchar(500) tags
+        varchar venue
+        varchar tags
         boolean is_online
-        varchar(1000) image_url
+        varchar image_url
         timestamp starts_at
         timestamp ends_at
         integer capacity
         integer available_seats
-        decimal(10,2) ticket_price
+        decimal ticket_price
         uuid category_id FK
         timestamp created_at
         integer version
@@ -61,10 +61,10 @@ erDiagram
         uuid user_id FK
         uuid event_id FK
         integer quantity
-        varchar(20) status
-        varchar(255) idempotency_key UK
-        decimal(10,2) total_amount
-        varchar(3) currency
+        varchar status
+        varchar idempotency_key UK
+        decimal total_amount
+        varchar currency
         timestamp created_at
     }
     
@@ -73,7 +73,7 @@ erDiagram
         uuid user_id FK
         uuid event_id FK
         integer position
-        varchar(20) status
+        varchar status
         timestamp expires_at
         timestamp created_at
         timestamp updated_at
@@ -104,13 +104,13 @@ erDiagram
         uuid booking_id FK
         uuid user_id FK
         uuid event_id FK
-        varchar(20) transaction_type
-        decimal(10,2) amount
-        varchar(3) currency
-        varchar(50) payment_method
-        varchar(50) payment_gateway
-        varchar(255) gateway_transaction_id
-        varchar(20) status
+        varchar transaction_type
+        decimal amount
+        varchar currency
+        varchar payment_method
+        varchar payment_gateway
+        varchar gateway_transaction_id
+        varchar status
         text failure_reason
         timestamp processed_at
         timestamp created_at
@@ -121,10 +121,10 @@ erDiagram
     NOTIFICATIONS {
         uuid id PK
         uuid user_id FK
-        varchar(50) type
-        varchar(255) title
+        varchar type
+        varchar title
         text message
-        varchar(500) action_url
+        varchar action_url
         boolean is_read
         timestamp created_at
         timestamp read_at
@@ -133,24 +133,25 @@ erDiagram
     }
     
     %% Relationships
-    USERS ||--o{ BOOKINGS : "user_id"
-    USERS ||--o{ WAITLIST : "user_id"
-    USERS ||--o{ EVENT_LIKES : "user_id"
-    USERS ||--o{ EVENT_COMMENTS : "user_id"
-    USERS ||--o{ TRANSACTIONS : "user_id"
-    USERS ||--o{ NOTIFICATIONS : "user_id"
+    USERS ||--o{ BOOKINGS : "makes"
+    USERS ||--o{ WAITLIST : "joins"
+    USERS ||--o{ EVENT_LIKES : "likes"
+    USERS ||--o{ EVENT_COMMENTS : "comments on"
+    USERS ||--o{ TRANSACTIONS : "performs"
+    USERS ||--o{ NOTIFICATIONS : "receives"
     
-    EVENT_CATEGORIES ||--o{ EVENTS : "category_id"
+    EVENT_CATEGORIES ||--o{ EVENTS : "categorizes"
     
-    EVENTS ||--o{ BOOKINGS : "event_id"
-    EVENTS ||--o{ WAITLIST : "event_id"
-    EVENTS ||--o{ EVENT_LIKES : "event_id"
-    EVENTS ||--o{ EVENT_COMMENTS : "event_id"
-    EVENTS ||--o{ TRANSACTIONS : "event_id"
+    EVENTS ||--o{ BOOKINGS : "has"
+    EVENTS ||--o{ WAITLIST : "has"
+    EVENTS ||--o{ EVENT_LIKES : "receives"
+    EVENTS ||--o{ EVENT_COMMENTS : "has"
+    EVENTS ||--o{ TRANSACTIONS : "related to"
     
-    BOOKINGS ||--o{ TRANSACTIONS : "booking_id"
+    BOOKINGS ||--o{ TRANSACTIONS : "initiates"
     
-    EVENT_COMMENTS ||--o{ EVENT_COMMENTS : "parent_comment_id"
+    EVENT_COMMENTS ||--o{ EVENT_COMMENTS : "is reply to"
+
 ```
 
 ## Detailed Entity Descriptions
